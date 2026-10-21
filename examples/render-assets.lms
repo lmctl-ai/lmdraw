@@ -1,6 +1,9 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/rendered/svg-assets";
 p = _dsl_ schema="../schema/lmdraw.dsl.json";
-scene.load_svg("assets/automation-ladder.svg", "level-one-stage");
+let stage = scene.load_svg("assets/automation-ladder.svg", "level-one-stage");
+let stage_again = scene.load_svg("assets/automation-ladder.svg", "level-one-stage");
+stage.set_attr("opacity", "0.99");
+stage_again.set_attr("opacity", "1.0");
 scene.render_png("build/rendered/svg-automation-ladder.png", 960, 360, 1);
 scene.load_svg("assets/automation-ladder-mobile.svg", "svg-mobile");
 scene.render_png("build/rendered/svg-automation-ladder-mobile.png", 720, 640, 1);

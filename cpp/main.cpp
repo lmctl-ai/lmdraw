@@ -44,6 +44,7 @@ struct Scene {
   int width = 0, height = 0;
   std::string background = "#152438", markup;
   bool loaded_svg = false;
+  std::string loaded_svg_path;
   std::unique_ptr<lmdraw::ImportedDocument> document;
   std::vector<std::unique_ptr<Node>> nodes;
   std::string definitions;
@@ -405,7 +406,7 @@ void register_host(dslvm::Registry& r) {
     validate_dims(a[0].i, a[1].i);
     validate_plain_color("fill", a[2].s);
     s->width = int(a[0].i); s->height = int(a[1].i); s->background = a[2].s;
-    ++s->generation; s->loaded_svg = false; s->document.reset(); s->definitions.clear();
+    ++s->generation; s->loaded_svg = false; s->loaded_svg_path.clear(); s->document.reset(); s->definitions.clear();
     s->markup = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + std::to_string(s->width) +
                 "\" height=\"" + std::to_string(s->height) + "\" viewBox=\"0 0 " +
                 std::to_string(s->width) + " " + std::to_string(s->height) + "\"><rect width=\"100%\" height=\"100%\" fill=\"" + esc(s->background) + "\"/>";
@@ -522,22 +523,29 @@ void register_host(dslvm::Registry& r) {
   });
   r.method("Scene", "load_svg", {"string", "string"}, "Node", [](void* p, Args& a) {
     auto* s = static_cast<Scene*>(p);
-    // Each load starts a new scene. Script nodes can then be appended over the SVG scene.
-    ++s->generation;
     if (a[1].s.empty() || a[1].s.size() > 128) throw dslvm::Error("SVG node id must be 1..128 bytes");
     auto path = safe_svg_path(a[0].s);
-    std::ifstream f(path, std::ios::binary);
-    std::string bytes((std::istreambuf_iterator<char>(f)), {});
-    if (bytes.size() > 2 * 1024 * 1024) throw dslvm::Error("SVG exceeds 2 MiB");
-    validate_svg_subset(bytes);
-    try { s->document = lmdraw::renderer().load_svg(bytes); }
-    catch (const std::exception& e) { throw dslvm::Error(e.what()); }
+    if (!s->loaded_svg || s->loaded_svg_path != path.string()) {
+      // A different SVG starts a new scene; repeated IDs from the same file
+      // remain live handles into one parsed document.
+      ++s->generation;
+      s->loaded_svg = false;
+      s->document.reset();
+      std::ifstream f(path, std::ios::binary);
+      std::string bytes((std::istreambuf_iterator<char>(f)), {});
+      if (bytes.size() > 2 * 1024 * 1024) throw dslvm::Error("SVG exceeds 2 MiB");
+      validate_svg_subset(bytes);
+      try { s->document = lmdraw::renderer().load_svg(bytes); }
+      catch (const std::exception& e) { throw dslvm::Error(e.what()); }
+      double w = s->document->width(), h = s->document->height();
+      if (!std::isfinite(w) || !std::isfinite(h) || w < 1 || h < 1 || w > 4096 || h > 4096 || double(w) * h > 8'000'000)
+        throw dslvm::Error("SVG intrinsic size exceeds canvas limits");
+      s->width = int(std::lround(w)); s->height = int(std::lround(h)); s->background = "#152438";
+      s->loaded_svg_path = path.string();
+      s->loaded_svg = true;
+    }
     if (!lmdraw::renderer().has_element(*s->document, a[1].s))
       throw dslvm::Error("SVG does not contain id " + a[1].s);
-    double w = s->document->width(), h = s->document->height();
-    if (!std::isfinite(w) || !std::isfinite(h) || w < 1 || h < 1 || w > 4096 || h > 4096 || double(w) * h > 8'000'000)
-      throw dslvm::Error("SVG intrinsic size exceeds canvas limits");
-    s->width = int(std::lround(w)); s->height = int(std::lround(h)); s->background = "#152438"; s->loaded_svg = true;
     auto node = std::make_unique<Node>(); node->svg_id = a[1].s; node->from_svg = true; node->owner = s; node->generation = s->generation;
     Node* raw = node.get(); s->nodes.push_back(std::move(node));
     return Value::object("Node", raw);

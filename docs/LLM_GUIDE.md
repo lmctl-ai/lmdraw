@@ -108,7 +108,7 @@ The host embeds Noto Sans Regular and Bold. Scene.text uses Noto Sans at the req
 
 ## SVG input subset
 
-load_svg parses an SVG under assets/ and returns a retained handle for the requested id. The same IDs are addressable through Node.set_attr. SVG files must be direct children of assets/, under 2 MiB, with valid intrinsic dimensions. The parser refuses CSS class/style attributes and stylesheets, script and event handlers, DTD/entities, SMIL animation, foreignObject, filters, and external URLs or files. Only same-document fragment references such as href="#shape" are accepted. Imported data images are not accepted; use the Scene.image constructor with a PNG data URI.
+load_svg parses an SVG under assets/ and returns a retained handle for the requested id. Call it more than once with the same path to keep handles for multiple IDs in one document; loading a different path starts a new scene. The IDs are addressable through Node.set_attr. SVG files must be direct children of assets/, under 2 MiB, with valid intrinsic dimensions. The parser refuses CSS class/style attributes and stylesheets, script and event handlers, DTD/entities, SMIL animation, foreignObject, filters, and external URLs or files. Only same-document fragment references such as href="#shape" are accepted. Imported data images are not accepted; use the Scene.image constructor with a PNG data URI.
 
 | SVG element | Scene meaning |
 | --- | --- |
