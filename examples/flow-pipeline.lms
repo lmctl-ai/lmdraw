@@ -24,13 +24,15 @@ for (i in range(0, xs.len())) {
     " A " + str(r) + " " + str(r) + " 0 0 1 " + str(x + r) + " " + str(y) + " Z ";
 }
 
-# one path: three connectors with arrowheads
-links_d = "";
+# one stroked path for shafts, one filled path for arrowheads (a filled
+# zero-area line subpath would be invisible)
+shafts_d = "";
+heads_d = "";
 for (i in range(0, 3)) {
-  let x1 = xs[i] + 150.0 + 8.0;
-  let x2 = xs[i + 1] - 8.0;
-  links_d = links_d + "M " + str(x1) + " 195.0 L " + str(x2) + " 195.0 ";
-  links_d = links_d + "M " + str(x2) + " 195.0 L " + str(x2 - 12.0) + " 188.5 L " + str(x2 - 12.0) + " 201.5 Z ";
+  let x1 = xs[i] + 150.0 + 6.0;
+  let x2 = xs[i + 1] - 6.0;
+  shafts_d = shafts_d + "M " + str(x1) + " 195.0 L " + str(x2 - 12.0) + " 195.0 ";
+  heads_d = heads_d + "M " + str(x2) + " 195.0 L " + str(x2 - 12.0) + " 188.5 L " + str(x2 - 12.0) + " 201.5 Z ";
 }
 
 out = ARGV.len() > 0 ? ARGV[0] : "build/flow-pipeline.dslb";
@@ -38,7 +40,8 @@ p = _dsl_ schema="../schema/lmdraw.dsl.json";
 scene.canvas(960, 420, "#101820");
 
 scene.path(${boxes_d}, "#1e3247", "#4a6a88", 2.0);
-scene.path(${links_d}, "#f5c16c", "none", 1.0);
+scene.path(${shafts_d}, "none", "#f5c16c", 2.5);
+scene.path(${heads_d}, "#f5c16c", "none", 1.0);
 
 scene.text(135.0, 201.0, 17.0, ${titles[0]}, "#dbe7f3").set_attr("text-anchor", "middle");
 scene.text(365.0, 201.0, 17.0, ${titles[1]}, "#dbe7f3").set_attr("text-anchor", "middle");

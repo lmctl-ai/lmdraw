@@ -4,9 +4,9 @@
 mid_xs = [220.0, 480.0, 740.0];
 mid_titles = ["parsers", "engines", "outputs"];
 leaf_xs = [
-  [100.0, 210.0, 320.0],
-  [380.0, 480.0, 580.0],
-  [660.0, 740.0, 820.0]
+  [70.0, 170.0, 270.0],
+  [390.0, 480.0, 570.0],
+  [690.0, 790.0, 890.0]
 ];
 leaf_titles = [
   ["html", "css", "json"],
@@ -36,7 +36,7 @@ for (i in range(0, 3)) {
 leaves_d = "";
 for (i in range(0, 3)) {
   for (j in range(0, 3)) {
-    leaves_d = leaves_d + rrect(leaf_xs[i][j] - 55.0, 370.0, 110.0, 40.0);
+    leaves_d = leaves_d + rrect(leaf_xs[i][j] - 44.0, 370.0, 88.0, 40.0);
   }
 }
 
@@ -49,7 +49,7 @@ scene.path(${nodes_d}, "#1e3247", "#4a6a88", 1.5);
 scene.path(${leaves_d}, "#1e3247", "#4a6a88", 1.5);
 
 # highlighted leaf: png (leaf 0 of outputs)
-let hot = scene.rect(660.0 - 55.0, 370.0, 110.0, 40.0, "#274b3f");
+let hot = scene.rect(690.0 - 44.0, 370.0, 88.0, 40.0, "#274b3f");
 hot.set_attr("stroke", "#7bbf5a");
 hot.set_attr("stroke-width", "2");
 
@@ -58,15 +58,15 @@ scene.text(220.0, 235.0, 14.0, ${mid_titles[0]}, "#dbe7f3").set_attr("text-ancho
 scene.text(480.0, 235.0, 14.0, ${mid_titles[1]}, "#dbe7f3").set_attr("text-anchor", "middle");
 scene.text(740.0, 235.0, 14.0, ${mid_titles[2]}, "#dbe7f3").set_attr("text-anchor", "middle");
 
-scene.text(100.0, 395.0, 14.0, ${leaf_titles[0][0]}, "#dbe7f3").set_attr("text-anchor", "middle");
-scene.text(210.0, 395.0, 14.0, ${leaf_titles[0][1]}, "#dbe7f3").set_attr("text-anchor", "middle");
-scene.text(320.0, 395.0, 14.0, ${leaf_titles[0][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
-scene.text(380.0, 395.0, 14.0, ${leaf_titles[1][0]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(70.0, 395.0, 14.0, ${leaf_titles[0][0]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(170.0, 395.0, 14.0, ${leaf_titles[0][1]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(270.0, 395.0, 14.0, ${leaf_titles[0][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(390.0, 395.0, 14.0, ${leaf_titles[1][0]}, "#dbe7f3").set_attr("text-anchor", "middle");
 scene.text(480.0, 395.0, 14.0, ${leaf_titles[1][1]}, "#dbe7f3").set_attr("text-anchor", "middle");
-scene.text(580.0, 395.0, 14.0, ${leaf_titles[1][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
-scene.text(660.0, 395.0, 14.0, ${leaf_titles[2][0]}, "#d8f3b0").set_attr("text-anchor", "middle");
-scene.text(740.0, 395.0, 14.0, ${leaf_titles[2][1]}, "#dbe7f3").set_attr("text-anchor", "middle");
-scene.text(820.0, 395.0, 14.0, ${leaf_titles[2][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(570.0, 395.0, 14.0, ${leaf_titles[1][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(690.0, 395.0, 14.0, ${leaf_titles[2][0]}, "#d8f3b0").set_attr("text-anchor", "middle");
+scene.text(790.0, 395.0, 14.0, ${leaf_titles[2][1]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(890.0, 395.0, 14.0, ${leaf_titles[2][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
 
 scene.text(60.0, 470.0, 15.0, "straight-edge layered tree, one highlighted path", "#9db4c8");
 scene.render_png("build/rendered/tree-org.png", 960, 520, 1);
