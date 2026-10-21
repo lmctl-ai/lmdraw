@@ -1,0 +1,6 @@
+out = ARGV.len() > 0 ? ARGV[0] : "build/prevalidate.dslb";
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(16, 16, "#152438");
+scene.render_png("build/rendered/prevalidation.png", 16, 16, 1);
+end _dsl_
+savedsl(p, out);

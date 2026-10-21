@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="150" viewBox="0 0 240 150" role="img" aria-labelledby="t d">
+  <title id="t">Agents coordinate through a Lead</title><desc id="d">A Lead connects coder and reviewer members; Claude and Codex provider badges identify the sessions.</desc>
+  <rect id="svg-team" x="5" y="5" width="230" height="140" rx="14" fill="#152438" fill-opacity=".9" stroke="#526a7e" stroke-width="2"/>
+  <path d="M120 61v23M62 84h116M62 84v14m116-14v14" fill="none" stroke="#72c6bd" stroke-width="3" stroke-linecap="round"/>
+  <rect x="82" y="25" width="76" height="36" rx="9" fill="#31475c" stroke="#f5c16c" stroke-width="2"/><text x="120" y="48" fill="#f5f8fb" text-anchor="middle" font-family="Noto Sans,sans-serif" font-size="13" font-weight="700">LEAD</text>
+  <rect x="24" y="98" width="76" height="30" rx="8" fill="#31475c" stroke="#72c6bd"/><text x="40" y="117" fill="#f5f8fb" text-anchor="start" font-family="Noto Sans,sans-serif" font-size="10" font-weight="700">CODER</text><circle cx="88" cy="113" r="8" fill="#152438" stroke="#88a8ef"/><text x="88" y="116" text-anchor="middle" fill="#f5f8fb" font-family="Noto Sans,sans-serif" font-size="6" font-weight="700">CX</text>
+  <rect x="140" y="98" width="76" height="30" rx="8" fill="#31475c" stroke="#f5c16c"/><text x="151" y="117" fill="#f5f8fb" text-anchor="start" font-family="Noto Sans,sans-serif" font-size="9" font-weight="700">REVIEW</text><circle cx="207" cy="113" r="8" fill="#152438" stroke="#f5c16c"/><text x="207" y="116" text-anchor="middle" fill="#f5f8fb" font-family="Noto Sans,sans-serif" font-size="6" font-weight="700">CL</text>
+</svg>

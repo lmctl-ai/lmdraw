@@ -1,0 +1,8 @@
+out = ARGV.len() > 0 ? ARGV[0] : "build/stale-node.dslb";
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(16, 16, "#152438");
+let old = scene.rect(1.0, 1.0, 4.0, 4.0, "#f5c16c");
+scene.canvas(16, 16, "#152438");
+old.set_attr("fill", "#6fbdb4");
+end _dsl_
+savedsl(p, out);

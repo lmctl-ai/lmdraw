@@ -1,0 +1,7 @@
+/build*/
+/build
+/dist/
+compiler.txt
+build-*.log
+*.dslb
+*.tmp-*

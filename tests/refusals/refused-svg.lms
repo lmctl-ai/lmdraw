@@ -1,0 +1,6 @@
+out = ARGV.len() > 0 ? ARGV[0] : "build/refused-svg.dslb";
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.load_svg("assets/refused-class.svg", "unsafe");
+scene.render_png("build/rendered/refused.png", 32, 32, 1);
+end _dsl_
+savedsl(p, out);

@@ -1,0 +1,15 @@
+out = ARGV.len() > 0 ? ARGV[0] : "build/rendered/animated-ladder.dslb";
+p = _dsl_ schema="../schema/lmdraw.dsl.json";
+let stage = scene.load_svg("assets/automation-ladder.svg", "level-one-stage");
+let marker = scene.circle(855.0, 325.0, 6.0, "#f5c16c");
+for (i in range(0, 24)) {
+  let t = float(i) / 23.0;
+  let opacity = lerp(0.22, 1.0, ease(t));
+  stage.set_attr("opacity", str(opacity));
+  marker.set_attr("cx", str(lerp(855.0, 925.0, ease(t))));
+  marker.set_attr("opacity", str(lerp(0.15, 0.9, ease(t))));
+  scene.render_png("build/rendered/ladder-" + str(i) + ".png", 640, 240, 1);
+}
+end _dsl_
+savedsl(p, out);
+println("wrote 24 deterministic numbered frames");

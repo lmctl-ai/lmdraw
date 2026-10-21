@@ -1,0 +1,17 @@
+out = ARGV.len() > 0 ? ARGV[0] : "build/rendered/svg-assets";
+p = _dsl_ schema="../schema/lmdraw.dsl.json";
+scene.load_svg("assets/automation-ladder.svg", "level-one-stage");
+scene.render_png("build/rendered/svg-automation-ladder.png", 960, 360, 1);
+scene.load_svg("assets/automation-ladder-mobile.svg", "svg-mobile");
+scene.render_png("build/rendered/svg-automation-ladder-mobile.png", 720, 640, 1);
+scene.load_svg("assets/level-automation.svg", "svg-auto");
+scene.render_png("build/rendered/svg-level-automation.png", 480, 300, 1);
+scene.load_svg("assets/level-delegate.svg", "svg-delegate");
+scene.render_png("build/rendered/svg-level-delegate.png", 480, 300, 1);
+scene.load_svg("assets/level-sessions.svg", "svg-sessions");
+scene.render_png("build/rendered/svg-level-sessions.png", 480, 300, 1);
+scene.load_svg("assets/level-team.svg", "svg-team");
+scene.render_png("build/rendered/svg-level-team.png", 480, 300, 1);
+end _dsl_
+savedsl(p, out);
+println("wrote six SVG renders");

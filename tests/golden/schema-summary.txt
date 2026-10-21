@@ -1,0 +1,30 @@
+Context
+context scene: Scene
+
+Gradient
+Gradient.stop(float, string) -> Gradient
+
+Group
+Group.add(Group) -> Group
+Group.add(Node) -> Group
+Group.set_attr(string, string) -> Group
+
+Node
+Node.set_attr(string, string) -> Node
+
+Scene
+Scene.canvas(int, int, string) -> Scene
+Scene.circle(float, float, float, string) -> Node
+Scene.ellipse(float, float, float, float, string) -> Node
+Scene.group() -> Group
+Scene.image(string, float, float, float, float) -> Node
+Scene.line(float, float, float, float, string, float) -> Node
+Scene.linear_gradient(string, float, float, float, float) -> Gradient
+Scene.load_font(string, string, bool) -> void
+Scene.load_svg(string, string) -> Node
+Scene.measure_text(string, float, bool) -> float
+Scene.path(string, string, string, float) -> Node
+Scene.polyline(string, string, float) -> Node
+Scene.rect(float, float, float, float, string) -> Node
+Scene.render_png(string, int, int, int) -> void
+Scene.text(float, float, float, string, string) -> Node
