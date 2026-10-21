@@ -29,11 +29,15 @@ scripts/sync-sdk.sh --verify >/dev/null || fail "SDK lock mismatch"
 ok "vendored SDK hash matches sdk.lock"
 LMSCRIPT="$(scripts/select-compiler.sh)"
 echo "compiler: $LMSCRIPT"
-CMAKE_EXTRA=()
 if [[ "$BUILD_DIR" == *sanitize* ]]; then
-  CMAKE_EXTRA=("-DCMAKE_C_FLAGS=-fsanitize=address,undefined" "-DCMAKE_CXX_FLAGS=-fsanitize=address,undefined -fno-omit-frame-pointer" "-DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined" "-DLMDRAW_FULL_STATIC=OFF")
+  cmake -S . -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS=-fsanitize=address,undefined \
+    -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+    -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address,undefined \
+    -DLMDRAW_FULL_STATIC=OFF > "$BUILD_DIR-configure.log" 2>&1 || { cat "$BUILD_DIR-configure.log" >&2; fail "CMake configure"; }
+else
+  cmake -S . -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release > "$BUILD_DIR-configure.log" 2>&1 || { cat "$BUILD_DIR-configure.log" >&2; fail "CMake configure"; }
 fi
-cmake -S . -B "$BUILD_DIR" -G Ninja -DCMAKE_BUILD_TYPE=Release "${CMAKE_EXTRA[@]}" > "$BUILD_DIR-configure.log" 2>&1 || { cat "$BUILD_DIR-configure.log" >&2; fail "CMake configure"; }
 if command -v nice >/dev/null 2>&1; then nice -n 10 cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; else cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; fi
 ctest --test-dir "$BUILD_DIR" --output-on-failure || fail "C++ unit tests"
 ok "host and C++ raster unit test build"
