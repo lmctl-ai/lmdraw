@@ -17,6 +17,8 @@
 #include <string>
 #include <vector>
 #ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
 #include <windows.h>
 #else
 #include <fcntl.h>
@@ -612,6 +614,9 @@ void schema_summary(const dslvm::Registry& r) {
 }  // namespace
 
 int main(int argc, char** argv) {
+#ifdef _WIN32
+  _setmode(_fileno(stdout), _O_BINARY);
+#endif
   lmdraw::renderer().add_font("Noto Sans", false, lmdraw::embedded::noto_regular,
                               lmdraw::embedded::noto_regular_size);
   lmdraw::renderer().add_font("Noto Sans", true, lmdraw::embedded::noto_bold,

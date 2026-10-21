@@ -141,6 +141,7 @@ jobs:
         run: |
           scripts/stage-release-notices.sh dist
           tar -czf dist/lmdraw-notices.tar.gz LICENSE THIRD_PARTY_NOTICES licenses
+          rm -rf dist/licenses
           git archive --format=tar.gz --prefix=lmdraw/ "$GITHUB_SHA" > dist/lmdraw-source.tar.gz
           (cd dist && sha256sum lmdraw-* LICENSE THIRD_PARTY_NOTICES > SHA256SUMS)
       - name: attach release assets
