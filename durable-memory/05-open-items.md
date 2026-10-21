@@ -1,0 +1,7 @@
+# Open items
+
+The initial renderer does not expose blur or drop-shadow filters, SVG filter graphs, radial-gradient constructors, clipping constructors, SVG import from in-memory strings, or APNG output. Numbered PNG frames are the supported animation handoff; ffmpeg can encode them separately.
+
+Complex text shaping, bidirectional layout, font hinting controls, and browser-equivalent SVG behavior are outside the first milestone. The current six diagrams, embedded Noto Sans, title-card, and tween path are the measured practical baseline.
+
+The public five-platform CI matrix must establish build and runtime behavior for Linux x64 and arm64, macOS arm64 and x64, and Windows x64 before a release tag is cut. Cross-platform byte-for-byte PNG identity is not promised; same-binary deterministic rerenders are tested.
