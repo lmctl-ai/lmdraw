@@ -139,6 +139,9 @@ jobs:
           merge-multiple: true
       - name: stage licenses and source
         run: |
+          version="$(sed -nE 's/^project\(lmdraw VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt)"
+          [[ -n "$version" && "$GITHUB_REF_NAME" == "v$version" ]]
+          [[ "$(dist/lmdraw-linux-x64 --version)" == "lmdraw $version" ]]
           scripts/stage-release-notices.sh dist
           tar -czf dist/lmdraw-notices.tar.gz LICENSE THIRD_PARTY_NOTICES licenses
           rm -rf dist/licenses

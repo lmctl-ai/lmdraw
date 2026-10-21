@@ -617,6 +617,10 @@ int main(int argc, char** argv) {
 #ifdef _WIN32
   _setmode(_fileno(stdout), _O_BINARY);
 #endif
+  if (argc == 2 && std::string(argv[1]) == "--version") {
+    std::cout << "lmdraw " << LMDRAW_VERSION << "\n";
+    return 0;
+  }
   lmdraw::renderer().add_font("Noto Sans", false, lmdraw::embedded::noto_regular,
                               lmdraw::embedded::noto_regular_size);
   lmdraw::renderer().add_font("Noto Sans", true, lmdraw::embedded::noto_bold,

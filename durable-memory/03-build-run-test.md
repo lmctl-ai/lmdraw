@@ -11,6 +11,8 @@ cmake --build build --parallel 3
 ./test.sh
 ```
 
+The binary reports its version with `lmdraw --version`; this value comes from the single `project(... VERSION ...)` declaration in CMakeLists.txt. Bump that version before creating the matching `vX.Y.Z` release tag. The release workflow checks the tag against the binary version.
+
 Compile an example with lmscript and run its bytecode with build/lmdraw --dsl FILE.dslb. The output directory must be build/rendered. The example test script creates it before rendering.
 
 The test suite checks the SDK pin, embedded schema byte identity, compiler/registry signature parity, bytecode v5 compilation, six SVG fixture renders, a title card, a node API example, 24 tween frames, deterministic rerenders, multi-file prevalidation, output-path refusal, stale handles, normal umask permissions, and Linux static linkage. The C++ unit test checks deterministic raster bytes and a non-background foreground pixel.
