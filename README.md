@@ -25,7 +25,7 @@ lmscript examples/title-card.lms build/title-card.dslb
 build/lmdraw --dsl build/title-card.dslb
 ```
 
-The PNG appears at build/rendered/title-card.png. See docs/LLM_GUIDE.md for the full API, SVG subset, safety limits, frame recipes, and errors.
+The PNG appears at build/rendered/title-card.png. See docs/LLM_GUIDE.md for the full API, SVG subset, safety limits, frame recipes, and errors. Public documentation is at https://lmctl.com/tools/lmdraw/.
 
 ## CLI
 
