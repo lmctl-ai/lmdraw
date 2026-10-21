@@ -27,6 +27,23 @@ build/lmdraw --dsl build/title-card.dslb
 
 The PNG appears at build/rendered/title-card.png. See docs/LLM_GUIDE.md for the full API, SVG subset, safety limits, frame recipes, and errors. Public documentation is at https://lmctl.com/tools/lmdraw/.
 
+## Examples
+
+Under examples/, each .lms file compiles to bytecode and renders PNGs; palette-limited previews live in examples/renders/ (regenerate with scripts/render-previews.sh).
+
+- title-card.lms: text, rectangles, and a gradient on a canvas.
+- node-tour.lms: the node constructors on one canvas.
+- render-assets.lms: loading the SVG subset and fonts from assets/.
+- animated-ladder.lms: 24 numbered frames driven by set_attr in a loop.
+- flow-pipeline.lms: a four-stage pipeline diagram with arrowheads and a cubic feedback edge.
+- decision-flowchart.lms: stadium/process/decision flowchart with yes/no branches.
+- tree-org.lms: a three-level layered tree.
+- table-metrics.lms: a zebra-striped metrics table built from two paths.
+- chart-bars-lines.lms: bar and line series drawn from data arrays by loops.
+- heatmap-grid.lms: a color-bucketed cell grid with legend.
+- geometry-ellipse.lms: circle with tangent, ellipse with foci.
+- tween-morph.lms: control-point morph frames plus a draw-on polyline sequence.
+
 ## CLI
 
 - `lmdraw --version` prints the release version from `project(... VERSION ...)` in CMakeLists.txt. Bump that project version before creating a matching `vX.Y.Z` release tag.
