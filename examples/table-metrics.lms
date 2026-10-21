@@ -45,7 +45,7 @@ for (r in range(0, 4)) {
 # arrow overlay across the errors row (q1 -> q3)
 arrows_d = "";
 for (c in range(0, 2)) {
-  let y = top + row_h * 2.0 + 12.0;
+  let y = top + row_h * 2.0 + 22.0;
   let x1 = left + col_w[0] + col_w[1] * (c + 1) - 24.0;
   let x2 = left + col_w[0] + col_w[1] * (c + 2) - 30.0;
   arrows_d = arrows_d + "M " + str(x1) + " " + str(y) + " L " + str(x2) + " " + str(y) + " ";
@@ -71,26 +71,25 @@ scene.text(290.0, 118.0, 14.0, "q1", "#f5c16c").set_attr("text-anchor", "middle"
 scene.text(410.0, 118.0, 14.0, "q2", "#f5c16c").set_attr("text-anchor", "middle");
 scene.text(530.0, 118.0, 14.0, "q3", "#f5c16c").set_attr("text-anchor", "middle");
 scene.text(650.0, 118.0, 14.0, "q4", "#f5c16c").set_attr("text-anchor", "middle");
-scene.text(92.0, 122.0, 14.0, "renders", "#dbe7f3").set_attr("text-anchor", "start");
-scene.text(338.0, 122.0, 14.0, "128", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(458.0, 122.0, 14.0, "96", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(578.0, 122.0, 14.0, "142", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(698.0, 122.0, 14.0, "151", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(92.0, 166.0, 14.0, "errors", "#dbe7f3").set_attr("text-anchor", "start");
-scene.text(338.0, 166.0, 14.0, "3", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(458.0, 166.0, 14.0, "7", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(578.0, 166.0, 14.0, "2", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(698.0, 166.0, 14.0, "1", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(92.0, 210.0, 14.0, "reviews", "#dbe7f3").set_attr("text-anchor", "start");
-scene.text(338.0, 210.0, 14.0, "22", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(458.0, 210.0, 14.0, "19", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(578.0, 210.0, 14.0, "25", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(698.0, 210.0, 14.0, "31", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(92.0, 254.0, 14.0, "merges", "#dbe7f3").set_attr("text-anchor", "start");
-scene.text(338.0, 254.0, 14.0, "9", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(458.0, 254.0, 14.0, "12", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(578.0, 254.0, 14.0, "17", "#dbe7f3").set_attr("text-anchor", "end");
-scene.text(698.0, 254.0, 14.0, "21", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(92.0, 162.0, 14.0, "renders", "#dbe7f3").set_attr("text-anchor", "start");
+scene.text(338.0, 162.0, 14.0, "128", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(458.0, 162.0, 14.0, "96", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(578.0, 162.0, 14.0, "142", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(698.0, 162.0, 14.0, "151", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(92.0, 206.0, 14.0, "errors", "#dbe7f3").set_attr("text-anchor", "start");
+scene.text(338.0, 206.0, 14.0, "3", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(458.0, 206.0, 14.0, "7", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(578.0, 206.0, 14.0, "2", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(698.0, 206.0, 14.0, "1", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(92.0, 250.0, 14.0, "reviews", "#dbe7f3").set_attr("text-anchor", "start");
+scene.text(338.0, 250.0, 14.0, "22", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(458.0, 250.0, 14.0, "19", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(578.0, 250.0, 14.0, "25", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(698.0, 250.0, 14.0, "31", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(92.0, 294.0, 14.0, "merges", "#dbe7f3").set_attr("text-anchor", "start");
+scene.text(338.0, 294.0, 14.0, "9", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(458.0, 294.0, 14.0, "12", "#dbe7f3").set_attr("text-anchor", "end");
+scene.text(578.0, 294.0, 14.0, "17", "#dbe7f3").set_attr("text-anchor", "end");
 
 # highlighted cell: q4 merges is hot
 let hot = scene.rect(590.0, 266.0, 120.0, 44.0, "#3f5d2a");
