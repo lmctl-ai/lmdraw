@@ -23,7 +23,7 @@ for image in examples/renders/*.png; do
   [[ -s "$image" && $(wc -c < "$image" | tr -d ' ') -lt 20480 ]] || fail "preview is missing or over 20 KiB: $image"
   check_png "$image" || fail "invalid preview PNG: $image"
 done
-ok "four example preview PNGs are valid and below 20 KiB"
+ok "example preview PNGs are valid and below 20 KiB"
 mkdir -p build/rendered
 scripts/sync-sdk.sh --verify >/dev/null || fail "SDK lock mismatch"
 ok "vendored SDK hash matches sdk.lock"
@@ -73,7 +73,7 @@ print(f'{len(signatures)} signatures listed in compact summary')
 PY
 ok "summary golden and registry signatures match the compiler"
 
-for example in title-card node-tour render-assets animated-ladder; do
+for example in title-card node-tour render-assets animated-ladder flow-pipeline decision-flowchart tree-org table-metrics chart-bars-lines heatmap-grid geometry-ellipse tween-morph; do
   "$LMSCRIPT" "examples/$example.lms" "$BUILD_DIR/$example.dslb" > /dev/null || fail "$example compile"
   python3 - "$BUILD_DIR/$example.dslb" <<'PY' || fail "example is not bytecode v5"
 from pathlib import Path
@@ -81,7 +81,7 @@ import sys
 assert Path(sys.argv[1]).read_bytes()[:6] == b'DSLB\x00\x05'
 PY
 done
-ok "four examples compile to bytecode v5"
+ok "twelve examples compile to bytecode v5"
 "$HOST" --dsl "$BUILD_DIR/title-card.dslb" "$BUILD_DIR/node-tour.dslb" > "$BUILD_DIR/multi.out" || fail "multi-file execution"
 [[ "$(wc -l < "$BUILD_DIR/multi.out" | tr -d ' ')" == 2 ]] || fail "multi-file result count"
 ok "all bytecode files load before ordered execution"
@@ -102,6 +102,18 @@ ok "24 frames are distinct and byte-identical on rerender"
 "$HOST" --dsl "$BUILD_DIR/title-card.dslb" > /dev/null || fail "title-card rerender"
 check_png build/rendered/title-card.png 960 540 || fail "title-card dimensions"
 ok "title-card PNG has expected dimensions"
+
+for spec in flow-pipeline:960:420 decision-flowchart:960:560 tree-org:960:520 table-metrics:960:430 chart-bars-lines:800:460 heatmap-grid:620:560 geometry-ellipse:800:460; do
+  IFS=: read -r example w h <<< "$spec"
+  "$HOST" --dsl "$BUILD_DIR/$example.dslb" > /dev/null || fail "$example run"
+  check_png "build/rendered/$example.png" "$w" "$h" || fail "$example PNG"
+done
+ok "seven drawing examples render PNGs at their canvas sizes"
+"$HOST" --dsl "$BUILD_DIR/tween-morph.dslb" > /dev/null || fail "tween-morph run"
+[[ $(compgen -G "build/rendered/morph-*.png" | wc -l | tr -d ' ') == 6 ]] || fail "expected 6 morph frames"
+[[ $(compgen -G "build/rendered/drawon-*.png" | wc -l | tr -d ' ') == 14 ]] || fail "expected 14 draw-on frames"
+for f in build/rendered/morph-*.png build/rendered/drawon-*.png; do check_png "$f" 800 460 || fail "frame $f"; done
+ok "tween-morph renders 6 morph and 14 draw-on frames"
 if [[ "$(uname -s)" == Linux* ]]; then
   (umask 027; "$HOST" --dsl "$BUILD_DIR/title-card.dslb" >/dev/null) || fail "umask output run"
   [[ "$(stat -c '%a' build/rendered/title-card.png)" == 640 ]] || fail "PNG mode does not honor umask"
