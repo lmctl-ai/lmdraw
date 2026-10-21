@@ -18,3 +18,11 @@ Compact preview renders are checked in under `renders/`. Recreate them with `scr
 ![Tween frame example](renders/animated-ladder-frame.png)
 
 See `../docs/LLM_GUIDE.md` for the complete API and safety limits.
+- `decision-flowchart.lms` builds a labeled decision diagram with arrow markers.
+- `flow-pipeline.lms` draws a staged pipeline with marker-ended connectors.
+- `table-metrics.lms` lays out metric cards with wrapped labels.
+- `tree-org.lms` draws a hierarchy with named connector markers.
+- `chart-bars-lines.lms` combines chart marks with animated dashed strokes.
+- `geometry-ellipse.lms` demonstrates ellipse geometry and presentation attributes.
+- `heatmap-grid.lms` uses wrapped labels in a colored grid.
+- `tween-morph.lms` animates a retained shape across deterministic frames.
