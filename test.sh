@@ -41,15 +41,20 @@ fi
 if command -v nice >/dev/null 2>&1; then nice -n 10 cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; else cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; fi
 ctest --test-dir "$BUILD_DIR" --output-on-failure || fail "C++ unit tests"
 ok "host and C++ raster unit test build"
-[[ "$("$HOST" --version)" == "lmdraw 0.1.1" ]] || fail "--version does not report the CMake project version"
+[[ "$("$HOST" --version)" == "lmdraw 0.1.2" ]] || fail "--version does not report the CMake project version"
 set +e
 "$HOST" --version extra >/dev/null 2>&1; code=$?
 set -e
 [[ $code == 2 ]] || fail "--version extra argument exit $code, expected 2"
-ok "--version prints lmdraw 0.1.1 and rejects extra arguments"
+ok "--version prints lmdraw 0.1.2 and rejects extra arguments"
 "$HOST" --schema --json > "$BUILD_DIR/embedded-schema.json"
 cmp schema/lmdraw.dsl.json "$BUILD_DIR/embedded-schema.json" || fail "embedded schema bytes differ"
 ok "--schema --json is byte-identical to schema/lmdraw.dsl.json"
+"$HOST" --dsl-schema --json > "$BUILD_DIR/compiler-schema.json"
+cmp schema/lmdraw.dsl.json "$BUILD_DIR/compiler-schema.json" || fail "compiler schema protocol differs"
+"$HOST" --dsl-schema > "$BUILD_DIR/dsl-schema-summary.txt"
+cmp "$BUILD_DIR/schema-summary.txt" "$BUILD_DIR/dsl-schema-summary.txt" || fail "compiler schema summary differs"
+ok "--dsl-schema protocol matches the embedded schema and summary"
 "$HOST" --schema > "$BUILD_DIR/schema-summary.txt"
 cmp tests/golden/schema-summary.txt "$BUILD_DIR/schema-summary.txt" || fail "schema summary differs from its golden"
 "$HOST" --dsl-signatures > "$BUILD_DIR/host-signatures.txt"

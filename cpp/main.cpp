@@ -628,14 +628,19 @@ int main(int argc, char** argv) {
   Scene scene;
   dslvm::Registry reg;
   register_host(reg);
-  if (argc == 2 && std::string(argv[1]) == "--schema") { schema_summary(reg); return 0; }
-  if (argc == 3 && std::string(argv[1]) == "--schema" && std::string(argv[2]) == "--json") {
+  const std::string schema_flag = argc > 1 ? argv[1] : "";
+  if (argc == 2 && (schema_flag == "--schema" || schema_flag == "--dsl-schema")) {
+    schema_summary(reg);
+    return 0;
+  }
+  if (argc == 3 && (schema_flag == "--schema" || schema_flag == "--dsl-schema") &&
+      std::string(argv[2]) == "--json") {
     std::cout.write(reinterpret_cast<const char*>(lmdraw::embedded::schema), lmdraw::embedded::schema_size);
     return 0;
   }
   if (argc == 2 && std::string(argv[1]) == "--dsl-signatures") { signatures(reg); return 0; }
   if (argc < 3 || std::string(argv[1]) != "--dsl") {
-    std::cerr << "usage: lmdraw --schema [--json] | --dsl FILE [FILE ...] | --dsl-signatures\n";
+    std::cerr << "usage: lmdraw --schema [--json] | --dsl-schema [--json] | --dsl FILE [FILE ...] | --dsl-signatures\n";
     return 2;
   }
   try {

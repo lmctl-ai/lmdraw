@@ -32,6 +32,7 @@ The PNG appears at build/rendered/title-card.png. See docs/LLM_GUIDE.md for the 
 - `lmdraw --version` prints the release version from `project(... VERSION ...)` in CMakeLists.txt. Bump that project version before creating a matching `vX.Y.Z` release tag.
 - lmdraw --schema prints a compact registry-derived summary.
 - lmdraw --schema --json prints the exact embedded schema bytes.
+- lmdraw --dsl-schema [--json] is the matching compiler protocol alias for the summary and exact schema bytes.
 - lmdraw --dsl-signatures prints canonical registry signatures.
 - lmdraw --dsl A.dslb [B.dslb ...] validates every file before running them in order.
 
