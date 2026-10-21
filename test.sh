@@ -41,12 +41,12 @@ fi
 if command -v nice >/dev/null 2>&1; then nice -n 10 cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; else cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; fi
 ctest --test-dir "$BUILD_DIR" --output-on-failure || fail "C++ unit tests"
 ok "host and C++ raster unit test build"
-[[ "$("$HOST" --version)" == "lmdraw 0.1.2" ]] || fail "--version does not report the CMake project version"
+[[ "$("$HOST" --version)" == "lmdraw 0.2.0" ]] || fail "--version does not report the CMake project version"
 set +e
 "$HOST" --version extra >/dev/null 2>&1; code=$?
 set -e
 [[ $code == 2 ]] || fail "--version extra argument exit $code, expected 2"
-ok "--version prints lmdraw 0.1.2 and rejects extra arguments"
+ok "--version prints lmdraw 0.2.0 and rejects extra arguments"
 "$HOST" --schema --json > "$BUILD_DIR/embedded-schema.json"
 cmp schema/lmdraw.dsl.json "$BUILD_DIR/embedded-schema.json" || fail "embedded schema bytes differ"
 ok "--schema --json is byte-identical to schema/lmdraw.dsl.json"
@@ -109,11 +109,49 @@ for spec in flow-pipeline:960:420 decision-flowchart:960:560 tree-org:960:520 ta
   check_png "build/rendered/$example.png" "$w" "$h" || fail "$example PNG"
 done
 ok "seven drawing examples render PNGs at their canvas sizes"
+cp build/rendered/decision-flowchart.png "$BUILD_DIR/decision-marked.png"
+sed '/set_attr("marker-end", /d' examples/decision-flowchart.lms > "$BUILD_DIR/decision-no-markers.lms"
+"$LMSCRIPT" "$BUILD_DIR/decision-no-markers.lms" "$BUILD_DIR/decision-no-markers.dslb" >/dev/null || fail "marker comparison compile"
+"$HOST" --dsl "$BUILD_DIR/decision-no-markers.dslb" >/dev/null || fail "marker comparison render"
+if cmp -s "$BUILD_DIR/decision-marked.png" build/rendered/decision-flowchart.png; then fail "named markers do not affect the rendered image"; fi
+"$HOST" --dsl "$BUILD_DIR/decision-flowchart.dslb" >/dev/null || fail "marked decision rerender"
+ok "named arrow, diamond and dot markers change the rendered image"
+cp build/rendered/decision-flowchart.png "$BUILD_DIR/decision-wrapped.png"
+sed 's/, w - 24.0)/)/g' examples/decision-flowchart.lms > "$BUILD_DIR/decision-no-wrap.lms"
+"$LMSCRIPT" "$BUILD_DIR/decision-no-wrap.lms" "$BUILD_DIR/decision-no-wrap.dslb" >/dev/null || fail "wrap comparison compile"
+"$HOST" --dsl "$BUILD_DIR/decision-no-wrap.dslb" >/dev/null || fail "wrap comparison render"
+if cmp -s "$BUILD_DIR/decision-wrapped.png" build/rendered/decision-flowchart.png; then fail "measured wrapping does not affect the rendered image"; fi
+"$HOST" --dsl "$BUILD_DIR/decision-flowchart.dslb" >/dev/null || fail "wrapped decision rerender"
+ok "measured text wrapping changes the rendered image"
 "$HOST" --dsl "$BUILD_DIR/tween-morph.dslb" > /dev/null || fail "tween-morph run"
 [[ $(compgen -G "build/rendered/morph-*.png" | wc -l | tr -d ' ') == 6 ]] || fail "expected 6 morph frames"
 [[ $(compgen -G "build/rendered/drawon-*.png" | wc -l | tr -d ' ') == 14 ]] || fail "expected 14 draw-on frames"
 for f in build/rendered/morph-*.png build/rendered/drawon-*.png; do check_png "$f" 800 460 || fail "frame $f"; done
-ok "tween-morph renders 6 morph and 14 draw-on frames"
+ok "tween-morph renders 6 morph and 14 dash-offset draw-on frames"
+if command -v sha256sum >/dev/null; then
+  sha256sum build/rendered/drawon-*.png | sort -k1,1 > "$BUILD_DIR/drawon-first.sha"
+else
+  shasum -a 256 build/rendered/drawon-*.png | sort -k1,1 > "$BUILD_DIR/drawon-first.sha"
+fi
+[[ $(cut -d' ' -f1 "$BUILD_DIR/drawon-first.sha" | sort -u | wc -l | tr -d ' ') -ge 10 ]] || fail "draw-on frames do not advance distinctly"
+"$HOST" --dsl "$BUILD_DIR/tween-morph.dslb" >/dev/null || fail "deterministic draw-on rerender"
+if command -v sha256sum >/dev/null; then
+  sha256sum build/rendered/drawon-*.png | sort -k1,1 > "$BUILD_DIR/drawon-second.sha"
+else
+  shasum -a 256 build/rendered/drawon-*.png | sort -k1,1 > "$BUILD_DIR/drawon-second.sha"
+fi
+cmp "$BUILD_DIR/drawon-first.sha" "$BUILD_DIR/drawon-second.sha" || fail "draw-on rerender changed bytes"
+ok "14 dash-offset frames are distinct and byte-identical on rerender"
+for fixture in invalid-marker invalid-dash; do
+  "$LMSCRIPT" "tests/refusals/$fixture.lms" "$BUILD_DIR/$fixture.dslb" >/dev/null || fail "$fixture fixture compile"
+  set +e
+  "$HOST" --dsl "$BUILD_DIR/$fixture.dslb" >/dev/null 2> "$BUILD_DIR/$fixture.err"; code=$?
+  set -e
+  [[ $code == 3 ]] || fail "$fixture refusal exit $code, expected 3"
+done
+grep -q 'marker-end must be none, arrow, dot, or diamond' "$BUILD_DIR/invalid-marker.err" || fail "marker value diagnostic"
+grep -q 'stroke-dasharray entries must be positive finite pixel lengths' "$BUILD_DIR/invalid-dash.err" || fail "dash value diagnostic"
+ok "invalid marker names and dash lengths are refused with located DSL errors"
 if [[ "$(uname -s)" == Linux* ]]; then
   (umask 027; "$HOST" --dsl "$BUILD_DIR/title-card.dslb" >/dev/null) || fail "umask output run"
   [[ "$(stat -c '%a' build/rendered/title-card.png)" == 640 ]] || fail "PNG mode does not honor umask"

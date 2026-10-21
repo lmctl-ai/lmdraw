@@ -14,14 +14,6 @@ leaf_titles = [
   ["png", "svg", "mp4"]
 ];
 
-edges_d = "";
-for (i in range(0, 3)) {
-  edges_d = edges_d + "M 480.0 90.0 L " + str(mid_xs[i]) + " 210.0 ";
-  for (j in range(0, 3)) {
-    edges_d = edges_d + "M " + str(mid_xs[i]) + " 250.0 L " + str(leaf_xs[i][j]) + " 370.0 ";
-  }
-}
-
 # rounded-rect subpath helper (plain rects are fine for tree nodes)
 nodes_d = "";
 # (lmscript fn kept untyped below)
@@ -44,7 +36,18 @@ out = ARGV.len() > 0 ? ARGV[0] : "build/tree-org.dslb";
 p = _dsl_ schema="../schema/lmdraw.dsl.json";
 scene.canvas(960, 520, "#101820");
 
-scene.path(${edges_d}, "none", "#8fb4d9", 1.8);
+for (i in range(0, 3)) {
+  let x = 220.0 + 260.0 * float(i);
+  let trunk = scene.line(480.0, 90.0, x, 205.0, "#8fb4d9", 1.8);
+  trunk.set_attr("marker-end", "dot");
+  let leaf_base = 70.0;
+  if (i == 1) { leaf_base = 390.0; }
+  else if (i == 2) { leaf_base = 690.0; }
+  for (j in range(0, 3)) {
+    let branch = scene.line(x, 250.0, leaf_base + 100.0 * float(j), 365.0, "#8fb4d9", 1.8);
+    branch.set_attr("marker-end", "dot");
+  }
+}
 scene.path(${nodes_d}, "#1e3247", "#4a6a88", 1.5);
 scene.path(${leaves_d}, "#1e3247", "#4a6a88", 1.5);
 

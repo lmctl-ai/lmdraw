@@ -1,0 +1,6 @@
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(64, 64, "#152438");
+let edge = scene.line(8.0, 8.0, 56.0, 56.0, "#f5c16c", 2.0);
+edge.set_attr("stroke-dasharray", "6 0");
+end _dsl_
+savedsl(p, "build/invalid-dash.dslb");

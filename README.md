@@ -35,14 +35,16 @@ Under examples/, each .lms file compiles to bytecode and renders PNGs; palette-l
 - node-tour.lms: the node constructors on one canvas.
 - render-assets.lms: loading the SVG subset and fonts from assets/.
 - animated-ladder.lms: 24 numbered frames driven by set_attr in a loop.
-- flow-pipeline.lms: a four-stage pipeline diagram with arrowheads and a cubic feedback edge.
-- decision-flowchart.lms: stadium/process/decision flowchart with yes/no branches.
-- tree-org.lms: a three-level layered tree.
-- table-metrics.lms: a zebra-striped metrics table built from two paths.
-- chart-bars-lines.lms: bar and line series drawn from data arrays by loops.
-- heatmap-grid.lms: a color-bucketed cell grid with legend.
-- geometry-ellipse.lms: circle with tangent, ellipse with foci.
-- tween-morph.lms: control-point morph frames plus a draw-on polyline sequence.
+- flow-pipeline.lms: a four-stage pipeline diagram with named arrow markers and a cubic feedback edge.
+- decision-flowchart.lms: stadium/process/decision flowchart with named arrow and diamond markers and wrapped labels.
+- tree-org.lms: a three-level layered tree with dot-marked branches.
+- table-metrics.lms: a zebra-striped metrics table with marked arrows.
+- chart-bars-lines.lms: bar and line series drawn from data arrays, with marker dots at data points.
+- heatmap-grid.lms: a color-bucketed cell grid with a measured, wrapped legend label.
+- geometry-ellipse.lms: circle with tangent, ellipse with foci, and dashed distance guides.
+- tween-morph.lms: control-point morph frames plus a stroke-dashoffset draw-on sequence.
+
+Scene.text has an optional measured wrap width and converts newline characters to tspans. Constructed line, path, and polyline nodes accept SVG-named marker-start, marker-mid, marker-end, stroke-dasharray, and stroke-dashoffset attributes. See docs/LLM_GUIDE.md for accepted values and limits.
 
 ## CLI
 

@@ -41,6 +41,7 @@ The compact schema is grouped by host type. The current members are:
 - polyline(string points, string stroke, float stroke_width) -> Node
 - path(string d, string fill, string stroke, float stroke_width) -> Node
 - text(float x, float baseline_y, float size, string content, string fill) -> Node
+- text(float x, float baseline_y, float size, string content, string fill, float wrap_width) -> Node
 - group() -> Group
 - image(string png_data_uri, float x, float y, float width, float height) -> Node
 - load_svg(string relative_path, string id) -> Node
@@ -80,6 +81,8 @@ Node.set_attr uses SVG-style names. Geometry values and the string-valued attrib
 | Paint | fill, stroke | Named colors, #RGB/#RGBA/#RRGGBB/#RRGGBBAA, none, or a same-scene linear gradient reference such as url(#warm) |
 | Opacity | opacity, fill-opacity, stroke-opacity | Number from 0 to 1 |
 | Stroke | stroke-width | Positive pixel value |
+| Stroke pattern | stroke-dasharray, stroke-dashoffset | Comma or space separated positive pixel lengths (at most 32 entries), or none; offset is a finite signed pixel length |
+| Markers | marker-start, marker-mid, marker-end | arrow, dot, diamond, or none; supported on constructed line, path, and polyline nodes |
 | Geometry | x, y, width, height, cx, cy, r, rx, ry, x1, y1, x2, y2 | Finite pixels; width, height, and radii must be positive |
 | Paths | d, points | Bounded SVG path data or numeric point pairs |
 | Text | font-family, font-size, font-weight, text-anchor | Font family name, positive pixel size, numeric/string weight, start/middle/end anchor |
@@ -105,6 +108,23 @@ The first renderer supports linear gradients from scripts. Coordinates are fract
 ## Text and fonts
 
 The host embeds Noto Sans Regular and Bold. Scene.text uses Noto Sans at the requested pixel size, with y at the text baseline. Set font-family, font-weight, or text-anchor after creating a text node. Scene.measure_text(text, size, bold) returns a width in pixels for layout. It measures UTF-8 text with the bundled font; it does not perform complex-script shaping or bidirectional layout. Custom TrueType files can be loaded only through an explicit assets/fonts/*.ttf path. Font files are data inputs, not fetched from the network.
+
+Text content may include newline characters; each line becomes an SVG tspan with a 1.2em baseline step. The six-argument Scene.text overload also wraps at word boundaries to fit a positive pixel width, measuring each candidate line with the embedded Noto Sans regular face. A word wider than the wrap width stays intact on its own line. Wrapped text is limited to 256 lines.
+
+## Markers and dashed strokes
+
+Set marker-start, marker-mid, or marker-end to arrow, dot, diamond, or none on a constructed line, path, or polyline node. Marker size scales with stroke-width and its fill follows the node stroke. Markers use automatic path orientation. Imported SVG nodes can still update ordinary supported presentation attributes, but named markers are limited to constructed line, path, and polyline nodes.
+
+Set stroke-dasharray to a comma or space separated list of positive pixel lengths, or none. Up to 32 lengths are accepted; an odd-length list repeats as SVG specifies. stroke-dashoffset accepts any finite signed pixel length. Updating the offset between renders enables a draw-on sequence without rebuilding path geometry:
+
+```lmscript
+let path = scene.polyline("40 80 140 30 240 80", "#f5c16c", 3.0);
+path.set_attr("stroke-dasharray", "400 400");
+for (i in range(0, 12)) {
+  path.set_attr("stroke-dashoffset", str(400.0 - float(i) * 400.0 / 11.0));
+  scene.render_png("build/rendered/draw-" + str(i) + ".png", 320, 120, 1);
+}
+```
 
 ## SVG input subset
 

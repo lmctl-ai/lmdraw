@@ -28,3 +28,4 @@ Scene.polyline(string, string, float) -> Node
 Scene.rect(float, float, float, float, string) -> Node
 Scene.render_png(string, int, int, int) -> void
 Scene.text(float, float, float, string, string) -> Node
+Scene.text(float, float, float, string, string, float) -> Node

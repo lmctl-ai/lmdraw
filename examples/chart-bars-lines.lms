@@ -45,7 +45,8 @@ scene.canvas(800, 460, "#101820");
 
 scene.path(${grid_d}, "none", "#31465c", 1.0);
 scene.path(${bars_d}, "#3d6b99", "none", 1.0);
-scene.polyline(${line_pts}, "#f5c16c", 2.5);
+let trend = scene.polyline(${line_pts}, "#f5c16c", 2.5);
+trend.set_attr("marker-mid", "dot");
 scene.path(${markers_d}, "#f5c16c", "#101820", 1.0);
 
 # y tick labels (explicit: no text loop over scalars is possible)

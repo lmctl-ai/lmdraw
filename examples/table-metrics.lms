@@ -42,17 +42,6 @@ for (r in range(0, 4)) {
     }
   }
 }
-# arrow overlay across the errors row (q1 -> q3)
-arrows_d = "";
-for (c in range(0, 2)) {
-  let y = top + row_h * 2.0 + 22.0;
-  let x1 = left + col_w[0] + col_w[1] * (c + 1) - 24.0;
-  let x2 = left + col_w[0] + col_w[1] * (c + 2) - 30.0;
-  arrows_d = arrows_d + "M " + str(x1) + " " + str(y) + " L " + str(x2) + " " + str(y) + " ";
-  arrows_d = arrows_d + "M " + str(x2) + " " + str(y) + " L " + str(x2 - 9.0) + " " + str(y - 4.5) +
-    " L " + str(x2 - 9.0) + " " + str(y + 4.5) + " Z ";
-}
-
 out = ARGV.len() > 0 ? ARGV[0] : "build/table-metrics.dslb";
 p = _dsl_ schema="../schema/lmdraw.dsl.json";
 scene.canvas(960, 430, "#101820");
@@ -97,7 +86,13 @@ hot.set_attr("stroke", "#7bbf5a");
 hot.set_attr("stroke-width", "2");
 scene.text(698.0, 294.0, 14.0, "21", "#d8f3b0").set_attr("text-anchor", "end");
 
-scene.path(${arrows_d}, "#f5c16c", "none", 1.0);
+for (c in range(0, 2)) {
+  let y = 200.0;
+  let x1 = 326.0 + 120.0 * float(c);
+  let x2 = 440.0 + 120.0 * float(c);
+  let arrow = scene.line(x1, y, x2, y, "#f5c16c", 1.8);
+  arrow.set_attr("marker-end", "arrow");
+}
 scene.text(242.0, 338.0, 15.0, "error count falling across quarters", "#9db4c8");
 scene.render_png("build/rendered/table-metrics.png", 960, 430, 1);
 end _dsl_

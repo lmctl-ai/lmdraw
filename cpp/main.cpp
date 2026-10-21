@@ -15,6 +15,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 #ifdef _WIN32
 #include <fcntl.h>
@@ -201,7 +202,7 @@ void validate_svg_subset(const std::string& bytes) {
       "xmlns", "xmlns:xlink", "width", "height", "viewBox", "preserveAspectRatio", "role", "aria-labelledby",
       "aria-label", "id", "x", "y", "rx", "ry", "cx", "cy", "r", "x1", "y1", "x2", "y2", "points", "d",
       "fill", "fill-opacity", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "stroke-opacity",
-      "opacity", "transform", "font-family", "font-size", "font-weight", "text-anchor", "href", "xlink:href",
+      "stroke-dasharray", "stroke-dashoffset", "opacity", "transform", "font-family", "font-size", "font-weight", "text-anchor", "href", "xlink:href",
       "gradientUnits", "gradientTransform", "offset", "stop-color", "stop-opacity", "clip-path", "mask"};
   static const std::regex tag(R"(<\s*([A-Za-z][\w:-]*)\b([^<>]*)>)");
   static const std::regex attr(R"(\s+([A-Za-z_:][\w:.-]*)\s*=)");
@@ -221,6 +222,7 @@ void validate_svg_subset(const std::string& bytes) {
 bool allowed_attr(const std::string& name) {
   static const std::vector<std::string> names = {
       "fill", "stroke", "stroke-width", "opacity", "fill-opacity", "stroke-opacity",
+      "marker-start", "marker-end", "marker-mid", "stroke-dasharray", "stroke-dashoffset",
       "transform", "font-family", "font-size", "font-weight", "text-anchor",
       "stroke-linecap", "stroke-linejoin", "x", "y", "width", "height", "cx", "cy", "r",
       "rx", "ry", "x1", "y1", "x2", "y2", "points", "d", "href"};
@@ -271,6 +273,36 @@ void validate_attr(const std::string& name, const std::string& value) {
     throw dslvm::Error("stroke-linecap must be butt, round, or square");
   if (name == "stroke-linejoin" && value != "miter" && value != "round" && value != "bevel")
     throw dslvm::Error("stroke-linejoin must be miter, round, or bevel");
+  if (name == "marker-start" || name == "marker-mid" || name == "marker-end")
+    if (value != "none" && value != "arrow" && value != "dot" && value != "diamond")
+      throw dslvm::Error(name + " must be none, arrow, dot, or diamond");
+  if (name == "stroke-dasharray") {
+    if (value == "none") return;
+    static const std::regex list(R"(^\s*(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?(?:\s*[, ]\s*(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)*\s*$)");
+    if (!std::regex_match(value, list))
+      throw dslvm::Error("stroke-dasharray must be none or a comma/space separated list of positive pixel lengths");
+    std::istringstream input(value);
+    std::string token;
+    size_t count = 0;
+    while (std::getline(input, token, ',')) {
+      std::istringstream words(token);
+      std::string number;
+      while (words >> number) {
+        char* end = nullptr;
+        const double n = std::strtod(number.c_str(), &end);
+        if (end != number.c_str() + number.size() || !std::isfinite(n) || n <= 0 || n > 1'000'000)
+          throw dslvm::Error("stroke-dasharray entries must be positive finite pixel lengths");
+        if (++count > 32) throw dslvm::Error("stroke-dasharray may contain at most 32 lengths");
+      }
+    }
+    if (count == 0) throw dslvm::Error("stroke-dasharray needs at least one length");
+  }
+  if (name == "stroke-dashoffset") {
+    char* end = nullptr;
+    const double n = std::strtod(value.c_str(), &end);
+    if (end != value.c_str() + value.size() || !std::isfinite(n) || std::abs(n) > 1'000'000)
+      throw dslvm::Error("stroke-dashoffset must be a finite pixel length");
+  }
   if (name == "d" && value.find_first_not_of("MmZzLlHhVvCcSsQqTtAa0123456789.,+ -eE") != std::string::npos)
     throw dslvm::Error("path data contains unsupported characters");
 }
@@ -323,6 +355,42 @@ void validate_png_data_uri(const std::string& uri) {
   if (w == 0 || h == 0 || w > 4096 || h > 4096 || uint64_t(w) * h > 8'000'000)
     throw dslvm::Error("embedded PNG dimensions must fit 1..4096 pixels and 8000000 pixels total");
 }
+std::string wrap_text(const std::string& text, double width, float size) {
+  std::istringstream paragraphs(text);
+  std::string paragraph, result;
+  size_t lines = 0;
+  bool first_paragraph = true;
+  while (std::getline(paragraphs, paragraph, '\n')) {
+    if (!first_paragraph) result += '\n';
+    first_paragraph = false;
+    std::istringstream words(paragraph);
+    std::string word, line;
+    if (!(words >> word)) {
+      ++lines;
+      if (lines > 256) throw dslvm::Error("wrapped text may contain at most 256 lines");
+      continue;
+    }
+    while (true) {
+      std::string candidate = line.empty() ? word : line + " " + word;
+      const double measured = lmdraw::renderer().measure_text(candidate, size, false);
+      if (!line.empty() && measured > width) {
+        result += line + '\n';
+        if (++lines > 256) throw dslvm::Error("wrapped text may contain at most 256 lines");
+        line = word;
+      } else {
+        line = std::move(candidate);
+      }
+      if (!(words >> word)) break;
+    }
+    result += line;
+    if (++lines > 256) throw dslvm::Error("wrapped text may contain at most 256 lines");
+  }
+  if (!text.empty() && text.back() == '\n') {
+    if (++lines > 256) throw dslvm::Error("wrapped text may contain at most 256 lines");
+    result += '\n';
+  }
+  return result;
+}
 Node* add_node(Scene& s, const std::string& tag, std::map<std::string, std::string> attrs,
                std::string text = {}) {
   if (s.nodes.size() >= 10000) throw dslvm::Error("a scene may contain at most 10000 nodes");
@@ -336,12 +404,62 @@ Node* add_node(Scene& s, const std::string& tag, std::map<std::string, std::stri
   s.nodes.push_back(std::move(node));
   return raw;
 }
-std::string serialize(const Node& node) {
+using MarkerKey = std::tuple<std::string, std::string, std::string>;
+MarkerKey marker_key(const Node& node, const std::string& kind) {
+  const auto stroke = node.attrs.find("stroke");
+  const auto width = node.attrs.find("stroke-width");
+  return {kind, stroke == node.attrs.end() ? "black" : stroke->second,
+          width == node.attrs.end() ? "1" : width->second};
+}
+std::map<MarkerKey, std::string> collect_markers(const Scene& scene) {
+  std::map<MarkerKey, std::string> result;
+  for (const auto& node : scene.nodes) {
+    if (node->generation != scene.generation || node->from_svg) continue;
+    for (const char* name : {"marker-start", "marker-mid", "marker-end"}) {
+      const auto found = node->attrs.find(name);
+      if (found == node->attrs.end() || found->second == "none") continue;
+      const MarkerKey key = marker_key(*node, found->second);
+      if (!result.count(key)) result.emplace(key, "ld-marker-" + std::to_string(result.size()));
+    }
+  }
+  return result;
+}
+std::string serialize_markers(const std::map<MarkerKey, std::string>& markers) {
+  if (markers.empty()) return {};
+  std::string out = "<defs>";
+  for (const auto& [key, id] : markers) {
+    const auto& [kind, color, width] = key;
+    out += "<marker id=\"" + id + "\" markerWidth=\"4\" markerHeight=\"4\" refX=\"" +
+           (kind == "dot" ? "2" : "4") + "\" refY=\"2\" orient=\"auto\" markerUnits=\"strokeWidth\" overflow=\"visible\">";
+    if (kind == "arrow") out += "<path d=\"M0,0 L4,2 L0,4 z\" fill=\"" + esc(color) + "\"/>";
+    else if (kind == "diamond") out += "<path d=\"M0,2 L2,0 L4,2 L2,4 z\" fill=\"" + esc(color) + "\"/>";
+    else out += "<circle cx=\"2\" cy=\"2\" r=\"1.5\" fill=\"" + esc(color) + "\"/>";
+    out += "</marker>";
+  }
+  return out + "</defs>";
+}
+std::string serialize(const Node& node, const std::map<MarkerKey, std::string>& markers) {
   std::string out = "<" + node.tag;
-  for (const auto& [name, value] : node.attrs) out += " " + name + "=\"" + esc(value) + "\"";
+  for (const auto& [name, value] : node.attrs) {
+    std::string emitted = value;
+    if ((name == "marker-start" || name == "marker-mid" || name == "marker-end") && value != "none")
+      emitted = "url(#" + markers.at(marker_key(node, value)) + ")";
+    out += " " + name + "=\"" + esc(emitted) + "\"";
+  }
   out += ">";
-  out += esc(node.text);
-  for (const Node* child : node.children) out += serialize(*child);
+  if (node.tag == "text" && node.text.find('\n') != std::string::npos) {
+    std::istringstream lines(node.text);
+    std::string line;
+    size_t index = 0;
+    while (std::getline(lines, line)) {
+      if (index == 0) out += "<tspan x=\"" + node.attrs.at("x") + "\">" + esc(line) + "</tspan>";
+      else out += "<tspan x=\"" + node.attrs.at("x") + "\" dy=\"1.2em\">" + esc(line) + "</tspan>";
+      ++index;
+    }
+    if (!node.text.empty() && node.text.back() == '\n')
+      out += "<tspan x=\"" + node.attrs.at("x") + "\" dy=\"1.2em\"></tspan>";
+  } else out += esc(node.text);
+  for (const Node* child : node.children) out += serialize(*child, markers);
   out += "</" + node.tag + ">";
   return out;
 }
@@ -362,14 +480,14 @@ std::string serialize_gradients(const Scene& scene) {
   }
   return out + "</defs>";
 }
-std::string serialize_nodes(const Scene& scene) {
+std::string serialize_nodes(const Scene& scene, const std::map<MarkerKey, std::string>& markers) {
   std::vector<const Node*> nested;
   for (const auto& parent : scene.nodes)
     for (const auto* child : parent->children) nested.push_back(child);
   std::string out;
   for (const auto& node : scene.nodes)
     if (node->generation == scene.generation && std::find(nested.begin(), nested.end(), node.get()) == nested.end() && !node->from_svg)
-      out += serialize(*node);
+      out += serialize(*node, markers);
   return out;
 }
 Value set_node_attr(void* object, Args& args, const char* result_type) {
@@ -377,6 +495,11 @@ Value set_node_attr(void* object, Args& args, const char* result_type) {
   if (!node || !node->owner || node->generation != node->owner->generation)
     throw dslvm::Error("node handle is stale; create or load it after setting the canvas");
   validate_attr(args[0].s, args[1].s);
+  if ((args[0].s == "marker-start" || args[0].s == "marker-mid" || args[0].s == "marker-end") &&
+      node->tag != "line" && node->tag != "path" && node->tag != "polyline")
+    throw dslvm::Error("markers are supported on line, path, and polyline nodes");
+  if ((args[0].s == "marker-start" || args[0].s == "marker-mid" || args[0].s == "marker-end") && node->from_svg)
+    throw dslvm::Error("named markers are supported on constructed line, path, and polyline nodes");
   if (node->from_svg) lmdraw::renderer().set_attribute(*node->owner->document, node->svg_id, args[0].s, args[1].s);
   else node->attrs[args[0].s] = args[1].s;
   return Value::object(result_type, object);
@@ -511,6 +634,15 @@ void register_host(dslvm::Registry& r) {
     return Value::object("Node", add_node(*s, "text", {{"x", num(a[0].f)}, {"y", num(a[1].f)},
         {"font-family", "Noto Sans"}, {"font-size", num(a[2].f)}, {"fill", a[4].s}}, a[3].s));
   });
+  r.method("Scene", "text", {"float", "float", "float", "string", "string", "float"}, "Node", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p); s->require_building();
+    finite(a[0].f, "text x"); finite(a[1].f, "text y"); positive(a[2].f, "text size"); positive(a[5].f, "text wrap width");
+    if (a[3].s.size() > 4096) throw dslvm::Error("text exceeds 4096 bytes");
+    validate_attr("fill", a[4].s);
+    const std::string wrapped = wrap_text(a[3].s, a[5].f, static_cast<float>(a[2].f));
+    return Value::object("Node", add_node(*s, "text", {{"x", num(a[0].f)}, {"y", num(a[1].f)},
+        {"font-family", "Noto Sans"}, {"font-size", num(a[2].f)}, {"fill", a[4].s}}, wrapped));
+  });
   r.method("Scene", "load_font", {"string", "string", "bool"}, "void", [](void*, Args& a) {
     if (a[0].s.empty() || a[0].s.size() > 128) throw dslvm::Error("font family must be 1..128 bytes");
     const auto path = safe_font_path(a[1].s);
@@ -565,21 +697,24 @@ void register_host(dslvm::Registry& r) {
     fs::path out = safe_png_path(a[0].s);
     AtomicOutput atomic(out);
     out = atomic.path();
+    const auto markers = collect_markers(*s);
+    const std::string marker_defs = serialize_markers(markers);
     if (s->loaded_svg) {
       std::string overlay;
-      const std::string nodes = serialize_nodes(*s);
+      const std::string nodes = serialize_nodes(*s, markers);
       const std::string gradients = serialize_gradients(*s);
       if (!nodes.empty() || !gradients.empty()) {
         overlay = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"" + std::to_string(rw) +
             "\" height=\"" + std::to_string(rh) + "\" viewBox=\"0 0 " + std::to_string(s->width) +
-            " " + std::to_string(s->height) + "\">" + gradients + nodes + "</svg>";
+            " " + std::to_string(s->height) + "\">" + marker_defs + gradients + nodes + "</svg>";
       }
       try { lmdraw::renderer().render_imported(*s->document, overlay, rw, rh, out); }
       catch (const std::exception& e) { throw dslvm::Error(e.what()); }
     } else {
       std::string svg = s->markup;
+      svg += marker_defs;
       svg += serialize_gradients(*s);
-      svg += serialize_nodes(*s);
+      svg += serialize_nodes(*s, markers);
       svg += "</svg>";
       try {
         lmdraw::renderer().render_svg(svg, rw, rh, 0x00000000, out);

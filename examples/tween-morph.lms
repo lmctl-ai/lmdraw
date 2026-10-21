@@ -31,16 +31,12 @@ for (b in range(0, blends.len())) {
   morph_ds[b] = d + " Z";
 }
 
-# Pulse polyline for the draw-on sequence, plus the growing prefixes.
+# The full pulse path stays in place; changing dash offset reveals it over time.
 xs = [80.0, 200.0, 240.0, 280.0, 320.0, 380.0, 420.0, 460.0, 500.0, 560.0, 600.0, 640.0, 680.0, 720.0];
 ys = [250.0, 250.0, 170.0, 320.0, 250.0, 250.0, 190.0, 300.0, 250.0, 250.0, 150.0, 330.0, 250.0, 250.0];
-polys = ["", "", "", "", "", "", "", "", "", "", "", "", "", ""];
+all_pts = "";
 for (k in range(0, xs.len())) {
-  let pts = "";
-  for (i in range(0, k + 1)) {
-    pts = pts + (i == 0 ? "" : " ") + str(xs[i]) + " " + str(ys[i]);
-  }
-  polys[k] = pts;
+  all_pts = all_pts + (k == 0 ? "" : " ") + str(xs[k]) + " " + str(ys[k]);
 }
 
 out = ARGV.len() > 0 ? ARGV[0] : "build/tween-morph.dslb";
@@ -63,40 +59,20 @@ scene.render_png("build/rendered/morph-4.png", 800, 460, 1);
 blob.set_attr("d", ${morph_ds[5]});
 scene.render_png("build/rendered/morph-5.png", 800, 460, 1);
 
-# Part 2: draw-on. Fresh canvas, one polyline grown point by point.
+# Part 2: draw-on by animating stroke-dashoffset on the complete polyline.
 scene.canvas(800, 460, "#101820");
 scene.text(40.0, 50.0, 20.0, "draw-on: pulse line", "#dbe7f3").set_attr("font-weight", "700");
-scene.text(40.0, 78.0, 13.0, "polyline prefix grows per frame", "#9db4c8");
+scene.text(40.0, 78.0, 13.0, "dash offset reveals one retained path", "#9db4c8");
 scene.line(60.0, 250.0, 740.0, 250.0, "#31465c", 1.0);
-let ink = scene.polyline(${polys[0]}, "#f5c16c", 3.0);
-let tip = scene.circle(float(${xs[0]}), float(${ys[0]}), 5.0, "#f5c16c");
-scene.render_png("build/rendered/drawon-0.png", 800, 460, 1);
-ink.set_attr("points", ${polys[1]}); tip.set_attr("cx", str(float(${xs[1]}))); tip.set_attr("cy", str(float(${ys[1]})));
-scene.render_png("build/rendered/drawon-1.png", 800, 460, 1);
-ink.set_attr("points", ${polys[2]}); tip.set_attr("cx", str(float(${xs[2]}))); tip.set_attr("cy", str(float(${ys[2]})));
-scene.render_png("build/rendered/drawon-2.png", 800, 460, 1);
-ink.set_attr("points", ${polys[3]}); tip.set_attr("cx", str(float(${xs[3]}))); tip.set_attr("cy", str(float(${ys[3]})));
-scene.render_png("build/rendered/drawon-3.png", 800, 460, 1);
-ink.set_attr("points", ${polys[4]}); tip.set_attr("cx", str(float(${xs[4]}))); tip.set_attr("cy", str(float(${ys[4]})));
-scene.render_png("build/rendered/drawon-4.png", 800, 460, 1);
-ink.set_attr("points", ${polys[5]}); tip.set_attr("cx", str(float(${xs[5]}))); tip.set_attr("cy", str(float(${ys[5]})));
-scene.render_png("build/rendered/drawon-5.png", 800, 460, 1);
-ink.set_attr("points", ${polys[6]}); tip.set_attr("cx", str(float(${xs[6]}))); tip.set_attr("cy", str(float(${ys[6]})));
-scene.render_png("build/rendered/drawon-6.png", 800, 460, 1);
-ink.set_attr("points", ${polys[7]}); tip.set_attr("cx", str(float(${xs[7]}))); tip.set_attr("cy", str(float(${ys[7]})));
-scene.render_png("build/rendered/drawon-7.png", 800, 460, 1);
-ink.set_attr("points", ${polys[8]}); tip.set_attr("cx", str(float(${xs[8]}))); tip.set_attr("cy", str(float(${ys[8]})));
-scene.render_png("build/rendered/drawon-8.png", 800, 460, 1);
-ink.set_attr("points", ${polys[9]}); tip.set_attr("cx", str(float(${xs[9]}))); tip.set_attr("cy", str(float(${ys[9]})));
-scene.render_png("build/rendered/drawon-9.png", 800, 460, 1);
-ink.set_attr("points", ${polys[10]}); tip.set_attr("cx", str(float(${xs[10]}))); tip.set_attr("cy", str(float(${ys[10]})));
-scene.render_png("build/rendered/drawon-10.png", 800, 460, 1);
-ink.set_attr("points", ${polys[11]}); tip.set_attr("cx", str(float(${xs[11]}))); tip.set_attr("cy", str(float(${ys[11]})));
-scene.render_png("build/rendered/drawon-11.png", 800, 460, 1);
-ink.set_attr("points", ${polys[12]}); tip.set_attr("cx", str(float(${xs[12]}))); tip.set_attr("cy", str(float(${ys[12]})));
-scene.render_png("build/rendered/drawon-12.png", 800, 460, 1);
-ink.set_attr("points", ${polys[13]}); tip.set_attr("cx", str(float(${xs[13]}))); tip.set_attr("cy", str(float(${ys[13]})));
-scene.render_png("build/rendered/drawon-13.png", 800, 460, 1);
+let ink = scene.polyline(${all_pts}, "#f5c16c", 3.0);
+ink.set_attr("stroke-dasharray", "1400 1400");
+ink.set_attr("stroke-dashoffset", "1400");
+ink.set_attr("marker-end", "arrow");
+for (i in range(0, 14)) {
+  let offset = 1400.0 * float(13 - i) / 13.0;
+  ink.set_attr("stroke-dashoffset", str(offset));
+  scene.render_png("build/rendered/drawon-" + str(i) + ".png", 800, 460, 1);
+}
 end _dsl_
 savedsl(p, out);
 println(f"wrote {out}");

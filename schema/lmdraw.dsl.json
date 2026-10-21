@@ -112,6 +112,17 @@
               "string"
             ],
             "returns": "Node"
+          },
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "string",
+              "string",
+              "float"
+            ],
+            "returns": "Node"
           }
         ],
         "load_svg": [

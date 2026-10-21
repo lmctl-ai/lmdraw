@@ -1,5 +1,5 @@
 # Flow diagram with arrows: a four-stage document pipeline with rounded
-# boxes, straight connectors, hand-built arrowheads, and a curved feedback
+# boxes, straight connectors with marker arrows, and a curved feedback
 # edge. Geometry comes from data lists with loops in lmscript; repeated
 # boxes are one path of rounded-rect subpaths.
 xs = [60.0, 290.0, 520.0, 750.0];
@@ -24,24 +24,17 @@ for (i in range(0, xs.len())) {
     " A " + str(r) + " " + str(r) + " 0 0 1 " + str(x + r) + " " + str(y) + " Z ";
 }
 
-# one stroked path for shafts, one filled path for arrowheads (a filled
-# zero-area line subpath would be invisible)
-shafts_d = "";
-heads_d = "";
-for (i in range(0, 3)) {
-  let x1 = xs[i] + 150.0 + 6.0;
-  let x2 = xs[i + 1] - 6.0;
-  shafts_d = shafts_d + "M " + str(x1) + " 195.0 L " + str(x2 - 12.0) + " 195.0 ";
-  heads_d = heads_d + "M " + str(x2) + " 195.0 L " + str(x2 - 12.0) + " 188.5 L " + str(x2 - 12.0) + " 201.5 Z ";
-}
-
 out = ARGV.len() > 0 ? ARGV[0] : "build/flow-pipeline.dslb";
 p = _dsl_ schema="../schema/lmdraw.dsl.json";
 scene.canvas(960, 420, "#101820");
 
 scene.path(${boxes_d}, "#1e3247", "#4a6a88", 2.0);
-scene.path(${shafts_d}, "none", "#f5c16c", 2.5);
-scene.path(${heads_d}, "#f5c16c", "none", 1.0);
+let shaft0 = scene.line(216.0, 195.0, 284.0, 195.0, "#f5c16c", 2.5);
+shaft0.set_attr("marker-end", "arrow");
+let shaft1 = scene.line(446.0, 195.0, 514.0, 195.0, "#f5c16c", 2.5);
+shaft1.set_attr("marker-end", "arrow");
+let shaft2 = scene.line(676.0, 195.0, 744.0, 195.0, "#f5c16c", 2.5);
+shaft2.set_attr("marker-end", "arrow");
 
 scene.text(135.0, 201.0, 17.0, ${titles[0]}, "#dbe7f3").set_attr("text-anchor", "middle");
 scene.text(365.0, 201.0, 17.0, ${titles[1]}, "#dbe7f3").set_attr("text-anchor", "middle");
@@ -54,7 +47,7 @@ scene.path("M 365.0 240.0 L 371.5 252.0 L 358.5 252.0 Z", "#8fb4d9", "none", 1.0
 scene.text(480.0, 368.0, 15.0, "revision feedback", "#8fb4d9").set_attr("text-anchor", "middle");
 
 scene.text(60.0, 70.0, 26.0, "Document pipeline", "#dbe7f3").set_attr("font-weight", "700");
-scene.text(60.0, 100.0, 15.0, "sequential stages, one feedback loop", "#9db4c8");
+scene.text(60.0, 100.0, 15.0, "sequential stages, one feedback loop", "#9db4c8", 245.0);
 scene.render_png("build/rendered/flow-pipeline.png", 960, 420, 1);
 end _dsl_
 savedsl(p, out);
