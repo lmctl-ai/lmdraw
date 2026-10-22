@@ -1,70 +1,62 @@
-# lmdraw
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/readme/hero-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/readme/hero-light.png">
+    <img src="docs/readme/hero-light.png" alt="lmdraw: a scripted 2D scene with bright vector lines on a canvas" width="100%">
+  </picture>
+</p>
 
-## Status
+**lmdraw turns small lmscript programs into crisp, repeatable 2D scenes, rendered as PNGs and frame sequences.**
 
-Experimental. The CLI and schema are evolving; it reads bytecode v5 and schema v2.
+[![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmdraw?label=release)](https://github.com/lmctl-ai/lmdraw/releases)
+[![CI](https://github.com/lmctl-ai/lmdraw/actions/workflows/ci.yml/badge.svg)](https://github.com/lmctl-ai/lmdraw/actions/workflows/ci.yml)
 
-lmdraw is a native, headless host for retained 2D scenes written in lmscript. Scripts create and update nodes, import a safe static SVG subset, render PNGs, and use ordinary loops to produce numbered frames. The schema is embedded in the executable.
+## Made with lmdraw
 
-## Build
+| Type and gradients | Flow diagrams | Data charts | Trees and org charts |
+| --- | --- | --- | --- |
+| ![Title card with styled text and gradients](examples/renders/title-card.png) | ![Four-stage flow pipeline](examples/renders/flow-pipeline.png) | ![Bars and line chart](examples/renders/chart-bars-lines.png) | ![Layered tree diagram](examples/renders/tree-org.png) |
+| Text, shapes, and a gradient. [Source](examples/title-card.lms) · [example book](https://lmctl.com/tools/lmdraw/examples/title-card.html) | Named stages, arrows, and a feedback edge. [Source](examples/flow-pipeline.lms) · [example book](https://lmctl.com/tools/lmdraw/examples/flow-pipeline.html) | Arrays become bars, labels, and a trend line. [Source](examples/chart-bars-lines.lms) · [example book](https://lmctl.com/tools/lmdraw/examples/chart-bars-lines.html) | A layered hierarchy with readable labels. [Source](examples/tree-org.lms) · [example book](https://lmctl.com/tools/lmdraw/examples/tree-org.html) |
 
-Requirements: C11/C++17 toolchains, CMake 3.24+, Ninja, Python 3 for embedding schema/font resources at build time, and Node.js 24.15+ with the published lmscript compiler for examples and tests.
+## How it works
+
+The diagram below is rendered by lmdraw itself from [docs/readme/architecture.lms](docs/readme/architecture.lms). SVG can be imported as an asset; lmdraw renders scenes to PNG.
+
+![lmscript and the lmdraw schema feed the native host, which renders PNG output; SVG assets can be loaded into a scene](docs/readme/architecture.png)
+
+The host is a compact native runtime for retained scenes. lmscript builds the scene and compiles it against the embedded schema; the same source can generate numbered frames with ordinary loops.
+
+## Quick start
+
+```sh
+npm install -g @lmctl-ai/lmctl
+lmctl init
+lmctl autorun https://lmctl.com/tools/lmdraw/lmdraw_solo.lms
+```
+
+For a local build, install the release through lmscript with `cli="lmdraw" install="github:lmctl-ai/lmdraw@latest"`; see the [get started guide](https://lmctl.com/tools/lmdraw/get_started.html).
+
+## Learn and download
+
+- [Get started](https://lmctl.com/tools/lmdraw/get_started.html) · [tool guide](https://lmctl.com/tools/lmdraw/guide.html) · [examples book](https://lmctl.com/tools/lmdraw/examples/)
+- [API summary and recipes](https://github.com/lmctl-ai/lmdraw/blob/main/docs/LLM_GUIDE.md) · [release downloads](https://github.com/lmctl-ai/lmdraw/releases)
+- [LMScript language and DSL docs](https://lmctl.com/tools/lmscript/skill.html)
+
+## Build and test
+
+Requires C11/C++17, CMake 3.24+, Ninja, Python 3, and Node.js 24.15+ with the published lmscript compiler.
 
 ```sh
 scripts/sync-sdk.sh --verify
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel 3
-```
-
-The release binary statically links the project libraries and, on Linux and Windows, the C/C++ runtimes. macOS uses system libraries, as macOS does not support static linking of its system runtime. The embedded Noto Sans Regular and Bold fonts and schema are compiled into the binary.
-
-## One minute example
-
-```sh
-lmscript examples/title-card.lms build/title-card.dslb
-build/lmdraw --dsl build/title-card.dslb
-```
-
-The PNG appears at build/rendered/title-card.png. See docs/LLM_GUIDE.md for the full API, SVG subset, safety limits, frame recipes, and errors. Public documentation is at https://lmctl.com/tools/lmdraw/.
-
-## Examples
-
-Under examples/, each .lms file compiles to bytecode and renders PNGs; palette-limited previews live in examples/renders/ (regenerate with scripts/render-previews.sh).
-
-- title-card.lms: text, rectangles, and a gradient on a canvas.
-- node-tour.lms: the node constructors on one canvas.
-- render-assets.lms: loading the SVG subset and fonts from assets/.
-- animated-ladder.lms: 24 numbered frames driven by set_attr in a loop.
-- flow-pipeline.lms: a four-stage pipeline diagram with named arrow markers and a cubic feedback edge.
-- decision-flowchart.lms: stadium/process/decision flowchart with named arrow and diamond markers and wrapped labels.
-- tree-org.lms: a three-level layered tree with dot-marked branches.
-- table-metrics.lms: a zebra-striped metrics table with marked arrows.
-- chart-bars-lines.lms: bar and line series drawn from data arrays, with marker dots at data points.
-- heatmap-grid.lms: a color-bucketed cell grid with a measured, wrapped legend label.
-- geometry-ellipse.lms: circle with tangent, ellipse with foci, and dashed distance guides.
-- tween-morph.lms: control-point morph frames plus a stroke-dashoffset draw-on sequence.
-
-Scene.text has an optional measured wrap width and converts newline characters to tspans. Constructed line, path, and polyline nodes accept SVG-named marker-start, marker-mid, marker-end, stroke-dasharray, and stroke-dashoffset attributes. See docs/LLM_GUIDE.md for accepted values and limits.
-
-## CLI
-
-- `lmdraw --version` prints the release version from `project(... VERSION ...)` in CMakeLists.txt. Bump that project version before creating a matching `vX.Y.Z` release tag.
-- lmdraw --schema prints a compact registry-derived summary.
-- lmdraw --schema --json prints the exact embedded schema bytes.
-- lmdraw --dsl-schema [--json] is the matching compiler protocol alias for the summary and exact schema bytes.
-- lmdraw --dsl-signatures prints canonical registry signatures.
-- lmdraw --dsl A.dslb [B.dslb ...] validates every file before running them in order.
-
-Exit codes are 0 for success, 2 for invalid command-line arguments, 3 for a DSL host/load error, and 4 for another application failure. PNG outputs are restricted to direct children of build/rendered/ and are atomically replaced.
-
-## Test
-
-```sh
 ./test.sh
 ```
 
-The test script compiles the examples, checks compiler/host signature parity, renders six SVG fixtures and 24 deterministic frames, checks refusal cases, and audits static linking on Linux or macOS.
+Regenerate the README artwork and example gallery with `docs/readme/render.sh`. Its lmscript sources live in `docs/readme/`; the feature gallery is rendered from the linked files in `examples/`.
 
-## License
+## License and company
 
-lmdraw-authored code is licensed under MIT; see LICENSE. Third-party component licenses and runtime notices are in THIRD_PARTY_NOTICES and licenses/. Each release also includes a source bundle and checksum files.
+The lmdraw-authored code is MIT licensed; see [LICENSE](LICENSE). Third-party licenses and runtime notices are listed in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) and [licenses/](licenses/).
+
+Made by **Lattice Systems LLC**.

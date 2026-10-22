@@ -1,0 +1,39 @@
+out = ARGV.len() > 0 ? ARGV[0] : "build/readme-architecture.dslb";
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(1200, 390, "#111c28");
+scene.text(58.0, 66.0, 25.0, "A small, explicit rendering pipeline", "#f2f6f7").set_attr("font-weight", "700");
+scene.text(58.0, 96.0, 15.0, "Write the scene once; compile it against the host schema and render on your machine.", "#aabcca");
+
+scene.rect(58.0, 148.0, 226.0, 150.0, "#1e3346");
+scene.rect(342.0, 148.0, 226.0, 150.0, "#213d4c");
+scene.rect(626.0, 148.0, 226.0, 150.0, "#293b4f");
+scene.rect(910.0, 148.0, 232.0, 150.0, "#24453f");
+
+scene.circle(171.0, 187.0, 13.0, "#f5c16c");
+scene.text(171.0, 238.0, 23.0, "LMScript", "#f2f6f7").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
+scene.text(171.0, 269.0, 14.0, "scene + SVG assets", "#aabcca").set_attr("text-anchor", "middle");
+
+scene.path("M 455.0 158.0 L 479.0 178.0 L 455.0 198.0 L 431.0 178.0 Z", "#74c9bd", "none", 1.0);
+scene.text(455.0, 238.0, 23.0, "Schema", "#f2f6f7").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
+scene.text(455.0, 269.0, 14.0, "typed host API", "#aabcca").set_attr("text-anchor", "middle");
+
+scene.rect(715.0, 158.0, 48.0, 40.0, "#8fb4d9");
+scene.circle(739.0, 178.0, 9.0, "#293b4f");
+scene.text(739.0, 238.0, 23.0, "Native host", "#f2f6f7").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
+scene.text(739.0, 269.0, 14.0, "lmdraw engine", "#aabcca").set_attr("text-anchor", "middle");
+
+scene.rect(953.0, 158.0, 54.0, 42.0, "#f5c16c");
+scene.text(1026.0, 238.0, 23.0, "PNG output", "#f2f6f7").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
+scene.text(1026.0, 269.0, 14.0, "plus numbered frames", "#aabcca").set_attr("text-anchor", "middle");
+
+let a = scene.line(292.0, 222.0, 332.0, 222.0, "#f5c16c", 2.5);
+a.set_attr("marker-end", "arrow");
+let b = scene.line(576.0, 222.0, 616.0, 222.0, "#f5c16c", 2.5);
+b.set_attr("marker-end", "arrow");
+let c = scene.line(860.0, 222.0, 900.0, 222.0, "#f5c16c", 2.5);
+c.set_attr("marker-end", "arrow");
+
+scene.text(58.0, 340.0, 14.0, "Safe SVG assets enter the scene; the native host renders PNG output.", "#8fa5b8");
+scene.render_png("build/rendered/readme-architecture.png", 1200, 390, 1);
+end _dsl_
+savedsl(p, out);
