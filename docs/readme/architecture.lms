@@ -22,7 +22,7 @@ scene.circle(739.0, 178.0, 9.0, "#293b4f");
 scene.text(739.0, 238.0, 23.0, "Native host", "#f2f6f7").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
 scene.text(739.0, 269.0, 14.0, "lmdraw engine", "#aabcca").set_attr("text-anchor", "middle");
 
-scene.rect(953.0, 158.0, 54.0, 42.0, "#f5c16c");
+scene.rect(999.0, 158.0, 54.0, 42.0, "#f5c16c");
 scene.text(1026.0, 238.0, 23.0, "PNG output", "#f2f6f7").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
 scene.text(1026.0, 269.0, 14.0, "plus numbered frames", "#aabcca").set_attr("text-anchor", "middle");
 

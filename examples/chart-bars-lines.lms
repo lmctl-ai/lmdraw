@@ -36,8 +36,8 @@ for (i in range(0, line_vals.len())) {
 }
 
 # y-axis grid lines at 100/200/300 plus baseline and y axis
-grid_d = "M 70.0 100.0 L 700.0 100.0 M 70.0 200.0 L 700.0 200.0 " +
-  "M 70.0 300.0 L 700.0 300.0 M 70.0 380.0 L 700.0 380.0 M 70.0 60.0 L 70.0 380.0 ";
+grid_d = "M 70.0 100.0 L 560.0 100.0 M 70.0 200.0 L 560.0 200.0 " +
+  "M 70.0 300.0 L 560.0 300.0 M 70.0 380.0 L 560.0 380.0 M 70.0 60.0 L 70.0 380.0 ";
 
 out = ARGV.len() > 0 ? ARGV[0] : "build/chart-bars-lines.dslb";
 p = _dsl_ schema="../schema/lmdraw.dsl.json";
