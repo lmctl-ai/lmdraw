@@ -17,6 +17,7 @@
 | --- | --- |
 | ![Title card with styled text and shapes](examples/renders/title-card.png) | ![Four-stage flow pipeline](examples/renders/flow-pipeline.png) |
 | Text, color, and a bold layout. [Source](examples/title-card.lms) · [example book](https://lmctl.com/tools/lmdraw/examples/title-card.html) | Named stages, arrows, and a feedback edge. [Source](examples/flow-pipeline.lms) · [example book](https://lmctl.com/tools/lmdraw/examples/flow-pipeline.html) |
+
 | Data charts | Trees and org charts |
 | --- | --- |
 | ![Bars and line chart](examples/renders/chart-bars-lines.png) | ![Layered tree diagram](examples/renders/tree-org.png) |
