@@ -13,6 +13,8 @@ Node
 Node.set_attr(string, string) -> Node
 
 Scene
+Scene.arrow(float, float, float, float, string, float) -> Node
+Scene.axes(float, float, float, float, float, float, float, float, int, string) -> Group
 Scene.canvas(int, int, string) -> Scene
 Scene.circle(float, float, float, string) -> Node
 Scene.ellipse(float, float, float, float, string) -> Node

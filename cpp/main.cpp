@@ -626,6 +626,52 @@ void register_host(dslvm::Registry& r) {
         {"x2", num(a[2].f)}, {"y2", num(a[3].f)}, {"stroke", a[4].s},
         {"stroke-width", num(a[5].f)}, {"stroke-linecap", "round"}}));
   });
+  r.method("Scene", "arrow", {"float", "float", "float", "float", "string", "float"}, "Node", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p); s->require_building();
+    for (int i = 0; i < 4; ++i) finite(a[i].f, "arrow coordinate");
+    positive(a[5].f, "arrow width");
+    validate_attr("stroke", a[4].s);
+    return Value::object("Node", add_node(*s, "line", {{"x1", num(a[0].f)}, {"y1", num(a[1].f)},
+        {"x2", num(a[2].f)}, {"y2", num(a[3].f)}, {"stroke", a[4].s},
+        {"stroke-width", num(a[5].f)}, {"stroke-linecap", "round"}, {"marker-end", "arrow"}}));
+  });
+  r.method("Scene", "axes", {"float", "float", "float", "float", "float", "float", "float", "float", "int", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p); s->require_building();
+    for (int i = 0; i < 8; ++i) finite(a[i].f, "axes coordinate");
+    positive(a[2].f, "axes width"); positive(a[3].f, "axes height");
+    finite(a[0].f + a[2].f, "axes right edge"); finite(a[1].f + a[3].f, "axes bottom edge");
+    if (a[5].f <= a[4].f || a[7].f <= a[6].f) throw dslvm::Error("axes ranges must be increasing");
+    if (a[8].i < 2 || a[8].i > 20) throw dslvm::Error("axes tick count must be from 2 to 20");
+    finite(a[5].f - a[4].f, "axes x range"); finite(a[7].f - a[6].f, "axes y range");
+    validate_attr("stroke", a[9].s);
+    const size_t required = 6 + 4 * static_cast<size_t>(a[8].i);
+    if (s->nodes.size() > 10000 - required) throw dslvm::Error("axes would exceed the scene node limit");
+    auto* group = add_node(*s, "g", {});
+    auto add = [&](Node* child) {
+      child->parent = group;
+      group->children.push_back(child);
+    };
+    const double x = a[0].f, y = a[1].f, w = a[2].f, h = a[3].f;
+    add(add_node(*s, "line", {{"x1", num(x)}, {"y1", num(y + h)}, {"x2", num(x + w)}, {"y2", num(y + h)},
+        {"stroke", a[9].s}, {"stroke-width", "1"}, {"stroke-linecap", "round"}}));
+    add(add_node(*s, "line", {{"x1", num(x)}, {"y1", num(y)}, {"x2", num(x)}, {"y2", num(y + h)},
+        {"stroke", a[9].s}, {"stroke-width", "1"}, {"stroke-linecap", "round"}}));
+    for (int i = 0; i <= a[8].i; ++i) {
+      const double t = double(i) / double(a[8].i);
+      const double px = x + t * w, py = y + h - t * h;
+      add(add_node(*s, "line", {{"x1", num(px)}, {"y1", num(y + h)}, {"x2", num(px)}, {"y2", num(y + h + 5)},
+          {"stroke", a[9].s}, {"stroke-width", "1"}}));
+      add(add_node(*s, "line", {{"x1", num(x - 5)}, {"y1", num(py)}, {"x2", num(x)}, {"y2", num(py)},
+          {"stroke", a[9].s}, {"stroke-width", "1"}}));
+      auto* xlabel = add_node(*s, "text", {{"x", num(px)}, {"y", num(y + h + 18)}, {"font-family", "Noto Sans"},
+          {"font-size", "11"}, {"fill", a[9].s}, {"text-anchor", "middle"}}, num(a[4].f + t * (a[5].f - a[4].f)));
+      add(xlabel);
+      auto* ylabel = add_node(*s, "text", {{"x", num(x - 9)}, {"y", num(py + 4)}, {"font-family", "Noto Sans"},
+          {"font-size", "11"}, {"fill", a[9].s}, {"text-anchor", "end"}}, num(a[6].f + t * (a[7].f - a[6].f)));
+      add(ylabel);
+    }
+    return Value::object("Group", group);
+  });
   r.method("Scene", "text", {"float", "float", "float", "string", "string"}, "Node", [](void* p, Args& a) {
     auto* s = static_cast<Scene*>(p); s->require_building();
     finite(a[0].f, "text x"); finite(a[1].f, "text y"); positive(a[2].f, "text size");

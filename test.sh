@@ -73,7 +73,7 @@ print(f'{len(signatures)} signatures listed in compact summary')
 PY
 ok "summary golden and registry signatures match the compiler"
 
-for example in title-card node-tour render-assets animated-ladder flow-pipeline decision-flowchart tree-org table-metrics chart-bars-lines heatmap-grid geometry-ellipse tween-morph; do
+for example in title-card node-tour render-assets animated-ladder flow-pipeline decision-flowchart tree-org table-metrics chart-bars-lines heatmap-grid geometry-ellipse arrow-helper tween-morph; do
   "$LMSCRIPT" "examples/$example.lms" "$BUILD_DIR/$example.dslb" > /dev/null || fail "$example compile"
   python3 - "$BUILD_DIR/$example.dslb" <<'PY' || fail "example is not bytecode v5"
 from pathlib import Path
@@ -81,7 +81,7 @@ import sys
 assert Path(sys.argv[1]).read_bytes()[:6] == b'DSLB\x00\x05'
 PY
 done
-ok "twelve examples compile to bytecode v5"
+ok "thirteen examples compile to bytecode v5"
 "$HOST" --dsl "$BUILD_DIR/title-card.dslb" "$BUILD_DIR/node-tour.dslb" > "$BUILD_DIR/multi.out" || fail "multi-file execution"
 [[ "$(wc -l < "$BUILD_DIR/multi.out" | tr -d ' ')" == 2 ]] || fail "multi-file result count"
 ok "all bytecode files load before ordered execution"
@@ -103,7 +103,7 @@ ok "24 frames are distinct and byte-identical on rerender"
 check_png build/rendered/title-card.png 960 540 || fail "title-card dimensions"
 ok "title-card PNG has expected dimensions"
 
-for spec in flow-pipeline:960:420 decision-flowchart:960:560 tree-org:960:520 table-metrics:960:430 chart-bars-lines:800:460 heatmap-grid:620:560 geometry-ellipse:800:460; do
+for spec in flow-pipeline:960:420 decision-flowchart:960:560 tree-org:960:520 table-metrics:960:430 chart-bars-lines:800:460 heatmap-grid:620:560 geometry-ellipse:800:460 arrow-helper:900:600; do
   IFS=: read -r example w h <<< "$spec"
   "$HOST" --dsl "$BUILD_DIR/$example.dslb" > /dev/null || fail "$example run"
   check_png "build/rendered/$example.png" "$w" "$h" || fail "$example PNG"

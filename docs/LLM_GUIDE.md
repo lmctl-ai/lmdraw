@@ -38,6 +38,8 @@ The compact schema is grouped by host type. The current members are:
 - circle(float cx, float cy, float radius, string fill) -> Node
 - ellipse(float cx, float cy, float rx, float ry, string fill) -> Node
 - line(float x1, float y1, float x2, float y2, string stroke, float stroke_width) -> Node
+- arrow(float x1, float y1, float x2, float y2, string stroke, float stroke_width) -> Node
+- axes(float x, float y, float width, float height, float xmin, float xmax, float ymin, float ymax, int intervals, string color) -> Group
 - polyline(string points, string stroke, float stroke_width) -> Node
 - path(string d, string fill, string stroke, float stroke_width) -> Node
 - text(float x, float baseline_y, float size, string content, string fill) -> Node
@@ -63,6 +65,11 @@ The compact schema is grouped by host type. The current members are:
 ### Gradient
 
 - stop(float offset, string color) -> Gradient
+
+Scene.arrow creates a line with a deterministic arrow marker at its endpoint.
+Scene.axes creates a group containing horizontal and vertical axes, intervals
+evenly spaced tick marks, and numeric labels for both ranges. The returned group
+can be styled or combined with plotted nodes.
 
 The exact registry summary and signature list are generated from the live host:
 

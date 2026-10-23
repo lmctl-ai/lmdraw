@@ -63,6 +63,36 @@
             "returns": "Node"
           }
         ],
+        "arrow": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "string",
+              "float"
+            ],
+            "returns": "Node"
+          }
+        ],
+        "axes": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "int",
+              "string"
+            ],
+            "returns": "Group"
+          }
+        ],
         "polyline": [
           {
             "params": [
