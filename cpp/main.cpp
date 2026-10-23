@@ -663,11 +663,11 @@ void register_host(dslvm::Registry& r) {
           {"stroke", a[9].s}, {"stroke-width", "1"}}));
       add(add_node(*s, "line", {{"x1", num(x - 5)}, {"y1", num(py)}, {"x2", num(x)}, {"y2", num(py)},
           {"stroke", a[9].s}, {"stroke-width", "1"}}));
-      auto* xlabel = add_node(*s, "text", {{"x", num(px)}, {"y", num(y + h + 18)}, {"font-family", "Noto Sans"},
-          {"font-size", "11"}, {"fill", a[9].s}, {"text-anchor", "middle"}}, num(a[4].f + t * (a[5].f - a[4].f)));
+      auto* xlabel = add_node(*s, "text", {{"x", num(px)}, {"y", num(y + h + 20)}, {"font-family", "Noto Sans"},
+          {"font-size", "13"}, {"fill", a[9].s}, {"text-anchor", "middle"}}, num(a[4].f + t * (a[5].f - a[4].f)));
       add(xlabel);
       auto* ylabel = add_node(*s, "text", {{"x", num(x - 9)}, {"y", num(py + 4)}, {"font-family", "Noto Sans"},
-          {"font-size", "11"}, {"fill", a[9].s}, {"text-anchor", "end"}}, num(a[6].f + t * (a[7].f - a[6].f)));
+          {"font-size", "13"}, {"fill", a[9].s}, {"text-anchor", "end"}}, num(a[6].f + t * (a[7].f - a[6].f)));
       add(ylabel);
     }
     return Value::object("Group", group);
