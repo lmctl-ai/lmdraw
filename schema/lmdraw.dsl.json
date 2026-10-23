@@ -93,6 +93,63 @@
             "returns": "Group"
           }
         ],
+        "log_axes": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "int",
+              "string"
+            ],
+            "returns": "Group"
+          },
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "float",
+              "bool",
+              "bool",
+              "int",
+              "string"
+            ],
+            "returns": "Group"
+          }
+        ],
+        "legend": [
+          {
+            "params": [
+              "float",
+              "float",
+              "string",
+              "string",
+              "string"
+            ],
+            "returns": "Group"
+          },
+          {
+            "params": [
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "string"
+            ],
+            "returns": "Group"
+          }
+        ],
         "polyline": [
           {
             "params": [

@@ -40,6 +40,10 @@ The compact schema is grouped by host type. The current members are:
 - line(float x1, float y1, float x2, float y2, string stroke, float stroke_width) -> Node
 - arrow(float x1, float y1, float x2, float y2, string stroke, float stroke_width) -> Node
 - axes(float x, float y, float width, float height, float xmin, float xmax, float ymin, float ymax, int intervals, string color) -> Group
+- log_axes(float x, float y, float width, float height, float xmin, float xmax, float ymin, float ymax, int y_intervals, string color) -> Group
+- log_axes(float x, float y, float width, float height, float xmin, float xmax, float ymin, float ymax, bool log_x, bool log_y, int linear_intervals, string color) -> Group
+- legend(float x, float y, string labels_newline, string colors_csv, string text_color) -> Group
+- legend(float x, float y, string labels_newline, string colors_csv, string text_color, string background) -> Group
 - polyline(string points, string stroke, float stroke_width) -> Node
 - path(string d, string fill, string stroke, float stroke_width) -> Node
 - text(float x, float baseline_y, float size, string content, string fill) -> Node
@@ -71,6 +75,14 @@ Scene.axes creates a group containing horizontal and vertical axes, intervals
 evenly spaced tick marks, and numeric labels for both ranges. Each axis prints
 all of its labels with one decimal count, the fewest that show the tick step
 (0.25 steps print 0.00, 0.25, ...; thirds print two decimals), and never -0.
+Scene.log_axes draws logarithmic axes with major decade ticks (`0.01`, `0.1`,
+`1`, `10`, `100`, `1000`, `10⁴`, `10⁻³`, ...) and minor sub-decade ticks at
+`2..9 × 10^k`. The 10-argument overload uses a logarithmic X axis and a linear
+Y axis (Bode and frequency-response plots); the 12-argument overload selects
+`log_x` and `log_y` independently (semi-log-X, semi-log-Y, or log–log).
+Scene.legend draws a rounded legend box (or `background = "none"`) with
+24 px colored line swatches and auto-measured 13 px text labels (1..16
+newline-separated labels and matching comma- or space-separated colors).
 The returned group can be styled or combined with plotted nodes.
 
 The exact registry summary and signature list are generated from the live host:
@@ -116,7 +128,7 @@ The first renderer supports linear gradients from scripts. Coordinates are fract
 
 ## Text and fonts
 
-The host embeds Noto Sans Regular and Bold. Scene.text uses Noto Sans at the requested pixel size, with y at the text baseline. Set font-family, font-weight, or text-anchor after creating a text node. Scene.measure_text(text, size, bold) returns a width in pixels for layout. It measures UTF-8 text with the bundled font; it does not perform complex-script shaping or bidirectional layout. Custom TrueType files can be loaded only through an explicit assets/fonts/*.ttf path. Font files are data inputs, not fetched from the network.
+The host embeds Noto Sans Regular, Noto Sans Bold, and Noto Sans Math Regular (used automatically as a per-glyph fallback for arrows `→ ← ↑ ↓ ↔ ⇒ ⇔`, relations `∝ ≤ ≥ ≈ ≠ ≡`, calculus/algebra symbols `∞ √ ∂ ∆ ∇ ∫ ∮ ∑ ∏`, and checkmarks `✓`). Scene.text uses Noto Sans at the requested pixel size, with y at the text baseline. Set font-family, font-weight, or text-anchor after creating a text node. Scene.measure_text(text, size, bold) returns a width in pixels for layout, including fallback math glyphs. It measures UTF-8 text with the bundled fonts; it does not perform complex-script shaping or bidirectional layout. Custom TrueType files can be loaded only through an explicit assets/fonts/*.ttf path. Font files are data inputs, not fetched from the network.
 
 Text content may include newline characters; each line becomes an SVG tspan with a 1.2em baseline step. The six-argument Scene.text overload also wraps at word boundaries to fit a positive pixel width, measuring each candidate line with the embedded Noto Sans regular face. A word wider than the wrap width stays intact on its own line. Wrapped text is limited to 256 lines.
 
@@ -229,7 +241,7 @@ Practical notes:
 - A block may define typed functions (`fn box(x: float, y: float) -> void { ... }`)
   and may be created inside an lmscript function; several saved blocks passed to
   one `lmdraw --dsl a.dslb b.dslb` share one scene (`examples/truss-bridge.lms`).
-- The embedded Noto Sans has no arrow (→), ∞, ≤, ≥, ≈ or √ glyphs; write them out.
+- The embedded Noto Sans + Noto Sans Math fonts cover Latin, Greek, Cyrillic, sub/superscripts, arrows (→ ← ↑ ↓ ↔ ⇒ ⇔), and common math symbols (∝, ∞, ≤, ≥, ≈, ≠, √, ∂, ∆, ∇, ∫, ∑, ∏, ✓).
 - Optional tools: test with `which("ffmpeg") != null` before calling them, since
   `system` throws when the program is missing.
 

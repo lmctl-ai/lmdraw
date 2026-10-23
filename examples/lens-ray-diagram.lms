@@ -9,7 +9,6 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/lens-ray-diagram.dslb";
 mkdir("images");
 mkdir("build");
-mkdir("build/rendered");
 
 F = 10.0;       # focal length, cm
 S = 11.0;       # px per cm
@@ -125,11 +124,10 @@ panel2.set_attr("rx", "8");
 scene.text(688.0, 410.0, 14.0, "Same equation", "#e6edf3").set_attr("font-weight", "700");
 scene.text(688.0, 434.0, 13.0, ${res2}, "#c9d6e2");
 scene.text(688.0, 524.0, 12.0, "A negative di means the image is on the object's side: it cannot be caught on a screen.", "#9fb3c8", 180.0);
-scene.render_png("build/rendered/lens-ray-diagram.png", 900, 640, 1);
+scene.render_png("images/lens-ray-diagram.png", 900, 640, 1);
 end _dsl_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
-copy_file("build/rendered/lens-ray-diagram.png", "images/lens-ray-diagram.png");
 println("wrote images/lens-ray-diagram.png");

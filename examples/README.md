@@ -28,6 +28,9 @@ From a checkout, `lmscript examples/<name>.lms` does the same (put `build/` firs
 | `punnett-square.lms` | Dihybrid cross and a chi-square test on Mendel's counts | 9 : 3 : 3 : 1, chi-square 0.47, p = 0.93 |
 | `mortgage-amortization.lms` | Yearly interest vs principal, balance, extra-payment what-if | $2,528.27 a month, $510,178 interest |
 | `npv-irr-cashflow.lms` | Cash-flow arrow diagram and the NPV-versus-rate curve | NPV +$19.9k at 8 %, IRR 13.9 % |
+| `relativity-lorentz.lms` | Lorentz factor γ = 1/√(1 − β²), length contraction, cosmic-ray muons (math/Greek glyph showcase) | γ(0.998) = 15.82, 23.6 % sea-level survival |
+| `kleiber-allometry.lms` | 7-decade × 6-decade `Scene.log_axes` log–log metabolic scaling from shrew to blue whale | OLS exponent α = 0.746 ≈ 3/4 |
+| `damped-oscillator.lms` | Underdamped, critically damped and overdamped RK4 responses + phase portrait with `Scene.legend` | ζ = 1.0 settles fastest (5.8 s) with 0 % overshoot |
 
 ## API tours
 

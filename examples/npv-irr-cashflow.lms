@@ -10,7 +10,6 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/npv-irr-cashflow.dslb";
 mkdir("images");
 mkdir("build");
-mkdir("build/rendered");
 
 CF = [-100.0, 18.0, 25.0, 30.0, 30.0, 25.0, 30.0];   # thousand $, end of year t
 RATE = 0.08;
@@ -147,11 +146,10 @@ wi.set_attr("stroke", "#4b3f6b");
 wi.set_attr("rx", "8");
 scene.text(676.0, 456.0, 14.0, "Reading the curve", "#b49cf0").set_attr("font-weight", "700");
 scene.text(676.0, 478.0, 12.0, "NPV falls as the rate rises. The IRR is the rate where it crosses zero: any project with an IRR above your cost of capital adds value.", "#c9d6e2", 194.0);
-scene.render_png("build/rendered/npv-irr-cashflow.png", 900, 700, 1);
+scene.render_png("images/npv-irr-cashflow.png", 900, 700, 1);
 end _dsl_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
-copy_file("build/rendered/npv-irr-cashflow.png", "images/npv-irr-cashflow.png");
 println("wrote images/npv-irr-cashflow.png");

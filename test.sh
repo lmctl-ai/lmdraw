@@ -27,7 +27,7 @@ while read -r lms; do
   [[ -f "$lms" ]] || fail "README references a missing example: $lms"
   readme_lms=$((readme_lms+1))
 done < <(grep -oE 'raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/[A-Za-z0-9_.-]+\.lms' README.md | sed 's|.*/main/||' | sort -u)
-[[ $readme_lms -ge 12 ]] || fail "expected at least 12 lmctl autorun examples in README.md, found $readme_lms"
+[[ $readme_lms -ge 15 ]] || fail "expected at least 15 lmctl autorun examples in README.md, found $readme_lms"
 if grep -nE '\[Source\]|see source' README.md; then fail "README still links sources instead of lmctl autorun commands"; fi
 readme_img=0
 while read -r img; do
@@ -39,7 +39,7 @@ while read -r img; do
   esac
   readme_img=$((readme_img+1))
 done < <(grep -oE 'docs/[A-Za-z0-9_/.-]+\.(png|gif)' README.md | sort -u)
-[[ $readme_img -ge 12 ]] || fail "expected at least 12 README images, found $readme_img"
+[[ $readme_img -ge 15 ]] || fail "expected at least 15 README images, found $readme_img"
 ok "README: $readme_lms autorun examples exist and $readme_img images have valid PNG/GIF headers"
 mkdir -p build/rendered
 scripts/sync-sdk.sh --verify >/dev/null || fail "SDK lock mismatch"
@@ -106,7 +106,7 @@ PY
   check_png "images/$example.png" || fail "$example did not write a valid images/$example.png"
   example_count=$((example_count+1))
 done
-[[ $example_count -ge 25 ]] || fail "expected at least 25 examples, found $example_count"
+[[ $example_count -ge 28 ]] || fail "expected at least 28 examples, found $example_count"
 if command -v ffmpeg >/dev/null 2>&1; then
   for gif in kepler-second-law animated-ladder tween-morph; do
     [[ "$(head -c 6 "images/$gif.gif")" == GIF8[79]a ]] || fail "$gif did not write a GIF"
@@ -200,6 +200,19 @@ set -e
 [[ $code == 3 ]] || fail "invalid axes refusal exit $code, expected 3"
 grep -q 'axes ranges must be increasing' "$BUILD_DIR/invalid-axes.err" || fail "axes range diagnostic"
 ok "invalid axes ranges are refused before node creation"
+for fixture in invalid-log-axes invalid-legend; do
+  "$LMSCRIPT" "tests/refusals/$fixture.lms" "$BUILD_DIR/$fixture.dslb" >/dev/null || fail "$fixture fixture compile"
+  set +e
+  "$HOST" --dsl "$BUILD_DIR/$fixture.dslb" >/dev/null 2> "$BUILD_DIR/$fixture.err"; code=$?
+  set -e
+  [[ $code == 3 ]] || fail "$fixture refusal exit $code, expected 3"
+done
+grep -q 'log_axes logarithmic x range must be positive' "$BUILD_DIR/invalid-log-axes.err" || fail "log_axes range diagnostic"
+grep -q 'legend requires 1..16 non-empty labels and one matching color per label' "$BUILD_DIR/invalid-legend.err" || fail "legend count diagnostic"
+"$LMSCRIPT" tests/math-glyphs.lms "$BUILD_DIR/math-glyphs.dslb" >/dev/null || fail "math-glyphs fixture compile"
+"$HOST" --dsl "$BUILD_DIR/math-glyphs.dslb" >/dev/null || fail "math-glyphs render"
+check_png images/lmdraw-math-glyphs.png 320 120 || fail "math-glyphs PNG"
+ok "math glyphs, log_axes, and legend render and refuse invalid inputs"
 "$LMSCRIPT" tests/zero-corner-radius.lms "$BUILD_DIR/zero-corner-radius.dslb" >/dev/null || fail "zero corner radius fixture compile"
 "$HOST" --dsl "$BUILD_DIR/zero-corner-radius.dslb" >/dev/null || fail "zero corner radius render"
 check_png build/rendered/zero-corner-radius.png 120 80 || fail "zero corner radius PNG"

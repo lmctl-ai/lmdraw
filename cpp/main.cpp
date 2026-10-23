@@ -535,6 +535,206 @@ Value group_add(void* object, Args& args) {
   }
   return Value::object("Group", object);
 }
+Node* build_log_axes(Scene& s, double x, double y, double w, double h,
+                     double xmin, double xmax, double ymin, double ymax,
+                     bool log_x, bool log_y, int64_t intervals, const std::string& color) {
+  s.require_building();
+  finite(x, "axes coordinate"); finite(y, "axes coordinate");
+  finite(w, "axes coordinate"); finite(h, "axes coordinate");
+  finite(xmin, "axes coordinate"); finite(xmax, "axes coordinate");
+  finite(ymin, "axes coordinate"); finite(ymax, "axes coordinate");
+  positive(w, "axes width"); positive(h, "axes height");
+  finite(x + w, "axes right edge"); finite(y + h, "axes bottom edge");
+  if (!log_x && !log_y) throw dslvm::Error("log_axes requires at least one logarithmic axis");
+  if (xmax <= xmin || ymax <= ymin) throw dslvm::Error("axes ranges must be increasing");
+  if (intervals < 2 || intervals > 20) throw dslvm::Error("axes tick count must be from 2 to 20");
+  finite(xmax - xmin, "axes x range"); finite(ymax - ymin, "axes y range");
+  if (log_x) {
+    if (xmin <= 0.0) throw dslvm::Error("log_axes logarithmic x range must be positive");
+    const double span = std::log10(xmax) - std::log10(xmin);
+    if (!std::isfinite(span) || span < 0.05 || span > 20.0)
+      throw dslvm::Error("log_axes logarithmic x range must span between 0.05 and 20 decades");
+  }
+  if (log_y) {
+    if (ymin <= 0.0) throw dslvm::Error("log_axes logarithmic y range must be positive");
+    const double span = std::log10(ymax) - std::log10(ymin);
+    if (!std::isfinite(span) || span < 0.05 || span > 20.0)
+      throw dslvm::Error("log_axes logarithmic y range must span between 0.05 and 20 decades");
+  }
+  validate_attr("stroke", color);
+  if (s.nodes.size() > 10000 - 300) throw dslvm::Error("axes would exceed the scene node limit");
+  auto* group = add_node(s, "g", {});
+  auto add = [&](Node* child) {
+    child->parent = group;
+    group->children.push_back(child);
+  };
+  add(add_node(s, "line", {{"x1", num(x)}, {"y1", num(y + h)}, {"x2", num(x + w)}, {"y2", num(y + h)},
+      {"stroke", color}, {"stroke-width", "1"}, {"stroke-linecap", "round"}}));
+  add(add_node(s, "line", {{"x1", num(x)}, {"y1", num(y)}, {"x2", num(x)}, {"y2", num(y + h)},
+      {"stroke", color}, {"stroke-width", "1"}, {"stroke-linecap", "round"}}));
+  if (log_x) {
+    const double lmin = std::log10(xmin), lmax = std::log10(xmax), lspan = lmax - lmin;
+    const int dmin = static_cast<int>(std::ceil(lmin - 1e-9));
+    const int dmax = static_cast<int>(std::floor(lmax + 1e-9));
+    if (dmax >= dmin) {
+      const int step = (dmax - dmin > 10) ? 2 : 1;
+      for (int d = dmin; d <= dmax; d += step) {
+        const double t = std::clamp((double(d) - lmin) / lspan, 0.0, 1.0);
+        const double px = x + t * w;
+        add(add_node(s, "line", {{"x1", num(px)}, {"y1", num(y + h)}, {"x2", num(px)}, {"y2", num(y + h + 5)},
+            {"stroke", color}, {"stroke-width", "1"}}));
+        add(add_node(s, "text", {{"x", num(px)}, {"y", num(y + h + 20)}, {"font-family", "Noto Sans"},
+            {"font-size", "13"}, {"fill", color}, {"text-anchor", "middle"}}, lmdraw::log_tick_label(d)));
+      }
+      if (dmax - dmin <= 8) {
+        for (int d = dmin - 1; d <= dmax; ++d) {
+          const double base = std::pow(10.0, d);
+          for (int m = 2; m <= 9; ++m) {
+            const double val = m * base;
+            if (val <= xmin * (1.0 + 1e-9) || val >= xmax * (1.0 - 1e-9)) continue;
+            const double t = (std::log10(val) - lmin) / lspan;
+            const double px = x + t * w;
+            add(add_node(s, "line", {{"x1", num(px)}, {"y1", num(y + h)}, {"x2", num(px)}, {"y2", num(y + h + 3)},
+                {"stroke", color}, {"stroke-width", "1"}}));
+          }
+        }
+      }
+    } else {
+      const int dec = lmdraw::tick_decimals((xmax - xmin) / double(intervals));
+      for (int i = 0; i <= intervals; ++i) {
+        const double t = double(i) / double(intervals);
+        const double val = xmin * std::pow(xmax / xmin, t);
+        const double px = x + t * w;
+        add(add_node(s, "line", {{"x1", num(px)}, {"y1", num(y + h)}, {"x2", num(px)}, {"y2", num(y + h + 5)},
+            {"stroke", color}, {"stroke-width", "1"}}));
+        add(add_node(s, "text", {{"x", num(px)}, {"y", num(y + h + 20)}, {"font-family", "Noto Sans"},
+            {"font-size", "13"}, {"fill", color}, {"text-anchor", "middle"}}, lmdraw::tick_label(val, dec)));
+      }
+    }
+  } else {
+    const int x_decimals = lmdraw::tick_decimals((xmax - xmin) / double(intervals));
+    for (int i = 0; i <= intervals; ++i) {
+      const double t = double(i) / double(intervals);
+      const double px = x + t * w;
+      add(add_node(s, "line", {{"x1", num(px)}, {"y1", num(y + h)}, {"x2", num(px)}, {"y2", num(y + h + 5)},
+          {"stroke", color}, {"stroke-width", "1"}}));
+      add(add_node(s, "text", {{"x", num(px)}, {"y", num(y + h + 20)}, {"font-family", "Noto Sans"},
+          {"font-size", "13"}, {"fill", color}, {"text-anchor", "middle"}}, lmdraw::tick_label(xmin + t * (xmax - xmin), x_decimals)));
+    }
+  }
+  if (log_y) {
+    const double lmin = std::log10(ymin), lmax = std::log10(ymax), lspan = lmax - lmin;
+    const int dmin = static_cast<int>(std::ceil(lmin - 1e-9));
+    const int dmax = static_cast<int>(std::floor(lmax + 1e-9));
+    if (dmax >= dmin) {
+      const int step = (dmax - dmin > 10) ? 2 : 1;
+      for (int d = dmin; d <= dmax; d += step) {
+        const double t = std::clamp((double(d) - lmin) / lspan, 0.0, 1.0);
+        const double py = y + h - t * h;
+        add(add_node(s, "line", {{"x1", num(x - 5)}, {"y1", num(py)}, {"x2", num(x)}, {"y2", num(py)},
+            {"stroke", color}, {"stroke-width", "1"}}));
+        add(add_node(s, "text", {{"x", num(x - 9)}, {"y", num(py + 4)}, {"font-family", "Noto Sans"},
+            {"font-size", "13"}, {"fill", color}, {"text-anchor", "end"}}, lmdraw::log_tick_label(d)));
+      }
+      if (dmax - dmin <= 8) {
+        for (int d = dmin - 1; d <= dmax; ++d) {
+          const double base = std::pow(10.0, d);
+          for (int m = 2; m <= 9; ++m) {
+            const double val = m * base;
+            if (val <= ymin * (1.0 + 1e-9) || val >= ymax * (1.0 - 1e-9)) continue;
+            const double t = (std::log10(val) - lmin) / lspan;
+            const double py = y + h - t * h;
+            add(add_node(s, "line", {{"x1", num(x - 3)}, {"y1", num(py)}, {"x2", num(x)}, {"y2", num(py)},
+                {"stroke", color}, {"stroke-width", "1"}}));
+          }
+        }
+      }
+    } else {
+      const int dec = lmdraw::tick_decimals((ymax - ymin) / double(intervals));
+      for (int i = 0; i <= intervals; ++i) {
+        const double t = double(i) / double(intervals);
+        const double val = ymin * std::pow(ymax / ymin, t);
+        const double py = y + h - t * h;
+        add(add_node(s, "line", {{"x1", num(x - 5)}, {"y1", num(py)}, {"x2", num(x)}, {"y2", num(py)},
+            {"stroke", color}, {"stroke-width", "1"}}));
+        add(add_node(s, "text", {{"x", num(x - 9)}, {"y", num(py + 4)}, {"font-family", "Noto Sans"},
+            {"font-size", "13"}, {"fill", color}, {"text-anchor", "end"}}, lmdraw::tick_label(val, dec)));
+      }
+    }
+  } else {
+    const int y_decimals = lmdraw::tick_decimals((ymax - ymin) / double(intervals));
+    for (int i = 0; i <= intervals; ++i) {
+      const double t = double(i) / double(intervals);
+      const double py = y + h - t * h;
+      add(add_node(s, "line", {{"x1", num(x - 5)}, {"y1", num(py)}, {"x2", num(x)}, {"y2", num(py)},
+          {"stroke", color}, {"stroke-width", "1"}}));
+      add(add_node(s, "text", {{"x", num(x - 9)}, {"y", num(py + 4)}, {"font-family", "Noto Sans"},
+          {"font-size", "13"}, {"fill", color}, {"text-anchor", "end"}}, lmdraw::tick_label(ymin + t * (ymax - ymin), y_decimals)));
+    }
+  }
+  return group;
+}
+Node* build_legend(Scene& s, double x, double y, const std::string& labels_str,
+                   const std::string& colors_str, const std::string& text_color,
+                   const std::string& background) {
+  s.require_building();
+  finite(x, "legend x"); finite(y, "legend y");
+  if (labels_str.empty() || labels_str.size() > 4096)
+    throw dslvm::Error("legend labels must contain 1..4096 bytes");
+  if (colors_str.empty() || colors_str.size() > 4096)
+    throw dslvm::Error("legend colors must contain 1..4096 bytes");
+  validate_plain_color("fill", text_color);
+  validate_plain_color("fill", background);
+  std::vector<std::string> labels;
+  {
+    std::istringstream ls(labels_str);
+    std::string line;
+    while (std::getline(ls, line, '\n')) {
+      if (!line.empty() && line.back() == '\r') line.pop_back();
+      if (!line.empty()) labels.push_back(line);
+    }
+  }
+  std::vector<std::string> colors;
+  {
+    std::string norm = colors_str;
+    for (char& c : norm) if (c == ',' || c == ';' || c == '\n' || c == '\r' || c == '\t') c = ' ';
+    std::istringstream cs(norm);
+    std::string tok;
+    while (cs >> tok) {
+      validate_plain_color("stroke", tok);
+      colors.push_back(tok);
+    }
+  }
+  if (labels.empty() || labels.size() > 16 || labels.size() != colors.size())
+    throw dslvm::Error("legend requires 1..16 non-empty labels and one matching color per label");
+  if (s.nodes.size() > 10000 - (2 + 2 * labels.size()))
+    throw dslvm::Error("legend would exceed the scene node limit");
+  double max_w = 0.0;
+  for (const auto& lbl : labels) {
+    max_w = std::max(max_w, lmdraw::renderer().measure_text(lbl, 13.0f, false));
+  }
+  const double box_w = std::max(96.0, max_w + 56.0);
+  const double box_h = double(labels.size()) * 22.0 + 12.0;
+  finite(x + box_w, "legend right edge");
+  finite(y + box_h, "legend bottom edge");
+  auto* group = add_node(s, "g", {});
+  auto add = [&](Node* child) {
+    child->parent = group;
+    group->children.push_back(child);
+  };
+  if (background != "none") {
+    add(add_node(s, "rect", {{"x", num(x)}, {"y", num(y)}, {"width", num(box_w)}, {"height", num(box_h)},
+        {"rx", "6"}, {"ry", "6"}, {"fill", background}, {"stroke", "#2c4156"}, {"stroke-width", "1"}}));
+  }
+  for (size_t i = 0; i < labels.size(); ++i) {
+    const double ry = y + 17.0 + double(i) * 22.0;
+    add(add_node(s, "line", {{"x1", num(x + 12.0)}, {"y1", num(ry)}, {"x2", num(x + 36.0)}, {"y2", num(ry)},
+        {"stroke", colors[i]}, {"stroke-width", "3"}, {"stroke-linecap", "round"}}));
+    add(add_node(s, "text", {{"x", num(x + 44.0)}, {"y", num(ry + 4.5)}, {"font-family", "Noto Sans"},
+        {"font-size", "13"}, {"fill", text_color}}, labels[i]));
+  }
+  return group;
+}
 void register_host(dslvm::Registry& r) {
   r.context("scene", "Scene");
   r.method("Scene", "canvas", {"int", "int", "string"}, "Scene", [](void* p, Args& a) {
@@ -685,6 +885,22 @@ void register_host(dslvm::Registry& r) {
     }
     return Value::object("Group", group);
   });
+  r.method("Scene", "log_axes", {"float", "float", "float", "float", "float", "float", "float", "float", "int", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_log_axes(*s, a[0].f, a[1].f, a[2].f, a[3].f, a[4].f, a[5].f, a[6].f, a[7].f, true, false, a[8].i, a[9].s));
+  });
+  r.method("Scene", "log_axes", {"float", "float", "float", "float", "float", "float", "float", "float", "bool", "bool", "int", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_log_axes(*s, a[0].f, a[1].f, a[2].f, a[3].f, a[4].f, a[5].f, a[6].f, a[7].f, a[8].b, a[9].b, a[10].i, a[11].s));
+  });
+  r.method("Scene", "legend", {"float", "float", "string", "string", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_legend(*s, a[0].f, a[1].f, a[2].s, a[3].s, a[4].s, "#16222e"));
+  });
+  r.method("Scene", "legend", {"float", "float", "string", "string", "string", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_legend(*s, a[0].f, a[1].f, a[2].s, a[3].s, a[4].s, a[5].s));
+  });
   r.method("Scene", "text", {"float", "float", "float", "string", "string"}, "Node", [](void* p, Args& a) {
     auto* s = static_cast<Scene*>(p); s->require_building();
     finite(a[0].f, "text x"); finite(a[1].f, "text y"); positive(a[2].f, "text size");
@@ -819,6 +1035,8 @@ int main(int argc, char** argv) {
                               lmdraw::embedded::noto_regular_size);
   lmdraw::renderer().add_font("Noto Sans", true, lmdraw::embedded::noto_bold,
                               lmdraw::embedded::noto_bold_size);
+  lmdraw::renderer().add_fallback_font(lmdraw::embedded::noto_math,
+                                       lmdraw::embedded::noto_math_size);
   Scene scene;
   dslvm::Registry reg;
   register_host(reg);

@@ -10,7 +10,6 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/incline-free-body.dslb";
 mkdir("images");
 mkdir("build");
-mkdir("build/rendered");
 
 PI = 3.141592653589793;
 G = 9.81; MASS = 10.0; MU_K = 0.2; MU_S = 0.3; DEG = 30.0;
@@ -132,11 +131,10 @@ scene.polyline(${sweep}, "#f5c16c", 2.5);
 scene.circle(0.0, 0.0, 5.0, "#6fbdb4").set_attr("cx", ${now_xy[0]}).set_attr("cy", ${now_xy[1]});
 scene.text(0.0, 0.0, 11.0, ${crit_txt}, "#f08a6c").set_attr("x", ${crit_x}).set_attr("y", "552").set_attr("transform", "translate(6 0)");
 scene.text(0.0, 0.0, 11.0, "this ramp", "#6fbdb4").set_attr("x", ${now_xy[0]}).set_attr("y", ${now_xy[1]}).set_attr("transform", "translate(-8 -8)").set_attr("text-anchor", "end");
-scene.render_png("build/rendered/incline-free-body.png", 900, 620, 1);
+scene.render_png("images/incline-free-body.png", 900, 620, 1);
 end _dsl_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
-copy_file("build/rendered/incline-free-body.png", "images/incline-free-body.png");
 println("wrote images/incline-free-body.png");

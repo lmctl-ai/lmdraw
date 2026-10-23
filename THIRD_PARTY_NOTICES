@@ -15,11 +15,12 @@ routines derived from the FreeType project under its FreeType Project License
 Full MIT and FTL texts are in licenses/; the source files retain their original
 stb notices.
 
-Noto Sans
----------
-Noto Sans Regular and Bold TrueType fonts are compiled into the executable and
-are licensed under SIL Open Font License 1.1. The font copyright notice and
-full license are in assets/fonts/OFL.txt and licenses/Noto-OFL-1.1.txt.
+Noto Sans and Noto Sans Math
+----------------------------
+Noto Sans Regular, Noto Sans Bold, and Noto Sans Math Regular TrueType fonts
+are compiled into the executable and are licensed under SIL Open Font License
+1.1. The font copyright notice and full license are in assets/fonts/OFL.txt
+and licenses/Noto-OFL-1.1.txt.
 
 Linux C and C++ runtimes
 ------------------------

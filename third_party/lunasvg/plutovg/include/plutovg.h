@@ -805,6 +805,7 @@ PLUTOVG_API plutovg_font_face_t* plutovg_font_face_load_from_file(const char* fi
  * @return A pointer to the loaded `plutovg_font_face_t` object, or `NULL` on failure.
  */
 PLUTOVG_API plutovg_font_face_t* plutovg_font_face_load_from_data(const void* data, unsigned int length, int ttcindex, plutovg_destroy_func_t destroy_func, void* closure);
+PLUTOVG_API bool plutovg_font_face_set_fallback_data(const void* data, unsigned int length);
 
 /**
  * @brief Increments the reference count of a font face.

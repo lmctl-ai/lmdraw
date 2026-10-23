@@ -20,8 +20,9 @@ add_custom_command(
           "${CMAKE_CURRENT_SOURCE_DIR}/schema/lmdraw.dsl.json"
           "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/NotoSans-Regular.ttf"
           "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/NotoSans-Bold.ttf"
+          "${CMAKE_CURRENT_SOURCE_DIR}/assets/fonts/NotoSansMath-Regular.ttf"
           "${CMAKE_CURRENT_BINARY_DIR}/generated/resources.hpp"
-  DEPENDS schema/lmdraw.dsl.json assets/fonts/NotoSans-Regular.ttf assets/fonts/NotoSans-Bold.ttf scripts/embed-resources.py
+  DEPENDS schema/lmdraw.dsl.json assets/fonts/NotoSans-Regular.ttf assets/fonts/NotoSans-Bold.ttf assets/fonts/NotoSansMath-Regular.ttf scripts/embed-resources.py
   VERBATIM)
 add_executable(lmdraw cpp/main.cpp cpp/luna_renderer.cpp "${CMAKE_CURRENT_BINARY_DIR}/generated/resources.hpp")
 target_include_directories(lmdraw PRIVATE cpp sdk "${CMAKE_CURRENT_BINARY_DIR}/generated" third_party/lunasvg/include)

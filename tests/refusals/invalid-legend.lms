@@ -1,0 +1,5 @@
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(120, 80, "#152438");
+scene.legend(10.0, 10.0, "one\ntwo", "#f5c16c", "#e6edf3");
+end _dsl_
+savedsl(p, ARGV.len() > 0 ? ARGV[0] : "build/invalid-legend.dslb");

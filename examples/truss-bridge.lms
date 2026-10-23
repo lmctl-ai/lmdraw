@@ -11,7 +11,6 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/truss-bridge.dslb";
 mkdir("images");
 mkdir("build");
-mkdir("build/rendered");
 
 # Joints: L0..L4 along the deck, U1..U3 on top (metres).
 JX = [0.0, 4.0, 8.0, 12.0, 16.0, 4.0, 8.0, 12.0];
@@ -93,7 +92,7 @@ react_txt = sprintf("%.0f kN", P[14]);
 p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 700, "#0f1720");
 scene.text(40.0, 44.0, 24.0, "Pratt vs Howe: same bridge, opposite diagonals", "#e6edf3").set_attr("font-weight", "700");
-scene.text(40.0, 72.0, 14.0, "Method of joints, 16 equations solved in lmscript. Member forces in kN; line width grows with force", "#9fb3c8");
+scene.text(40.0, 72.0, 14.0, "Method of joints (∑F = 0), 16 equations solved in lmscript. Member forces in kN; stroke width ∝ |F|", "#9fb3c8");
 scene.text(40.0, 112.0, 16.0, "Pratt truss", "#e6edf3").set_attr("font-weight", "700");
 scene.text(40.0, 402.0, 16.0, "Howe truss", "#e6edf3").set_attr("font-weight", "700");
 end _dsl_
@@ -126,8 +125,8 @@ scene.path("M 70 " + str(deck + 5.0) + " L 58 " + str(deck + 25.0) + " L 82 " + 
 scene.path("M 646 " + str(deck + 5.0) + " L 634 " + str(deck + 19.0) + " L 658 " + str(deck + 19.0) + " Z", "#9fb3c8", "none", 1.0);
 scene.circle(639.0, deck + 23.0, 4.0, "#9fb3c8");
 scene.circle(653.0, deck + 23.0, 4.0, "#9fb3c8");
-scene.text(70.0, deck + 44.0, 12.0, ${react_txt + " up"}, "#8fd694").set_attr("text-anchor", "middle");
-scene.text(646.0, deck + 44.0, 12.0, ${react_txt + " up"}, "#8fd694").set_attr("text-anchor", "middle");
+scene.text(70.0, deck + 44.0, 12.0, ${"↑ " + react_txt}, "#8fd694").set_attr("text-anchor", "middle");
+scene.text(646.0, deck + 44.0, 12.0, ${"↑ " + react_txt}, "#8fd694").set_attr("text-anchor", "middle");
 scene.text(0.0, 0.0, 12.5, ${D[5][0]}, ${D[1][0]}).set_attr("x", ${D[3][0]}).set_attr("y", ${D[4][0]}).set_attr("text-anchor", "middle");
 scene.text(0.0, 0.0, 12.5, ${D[5][1]}, ${D[1][1]}).set_attr("x", ${D[3][1]}).set_attr("y", ${D[4][1]}).set_attr("text-anchor", "middle");
 scene.text(0.0, 0.0, 12.5, ${D[5][2]}, ${D[1][2]}).set_attr("x", ${D[3][2]}).set_attr("y", ${D[4][2]}).set_attr("text-anchor", "middle");
@@ -152,10 +151,7 @@ let panel = scene.rect(674.0, 104.0, 208.0, 300.0, "#16222e");
 panel.set_attr("stroke", "#2c4156");
 panel.set_attr("rx", "8");
 scene.text(690.0, 130.0, 14.0, "Reading the forces", "#e6edf3").set_attr("font-weight", "700");
-scene.line(690.0, 152.0, 716.0, 152.0, "#7fa8d0", 5.0);
-scene.text(724.0, 157.0, 12.5, "tension (+)", "#e6edf3");
-scene.line(690.0, 176.0, 716.0, 176.0, "#f08a6c", 5.0);
-scene.text(724.0, 181.0, 12.5, "compression (−)", "#e6edf3");
+scene.legend(678.0, 138.0, "tension (+)\ncompression (−)", "#7fa8d0,#f08a6c", "#e6edf3", "none");
 scene.text(690.0, 210.0, 12.0, "In both designs the top chord is squeezed and the bottom chord stretched, like the top and bottom of a bent beam; the end posts carry the same 63.6 kN.", "#9fb3c8", 180.0);
 scene.text(690.0, 318.0, 12.0, "Flip the interior diagonals and they switch from tension (Pratt) to compression (Howe), and the chord forces shift between panels.", "#9fb3c8", 180.0);
 let wi = scene.rect(674.0, 424.0, 208.0, 210.0, "#1b1a26");
@@ -163,7 +159,7 @@ wi.set_attr("stroke", "#4b3f6b");
 wi.set_attr("rx", "8");
 scene.text(690.0, 450.0, 14.0, "Why it matters", "#b49cf0").set_attr("font-weight", "700");
 scene.text(690.0, 472.0, 12.0, "Long members buckle when pushed. Pratt puts its long diagonals in tension, so slender steel works: the usual choice for steel bridges. Howe puts them in compression and the short verticals in tension, which suited timber diagonals with iron rods.", "#c9d6e2", 180.0);
-scene.render_png("build/rendered/truss-bridge.png", 900, 700, 1);
+scene.render_png("images/truss-bridge.png", 900, 700, 1);
 end _dsl_
 
 savedsl(p, out);
@@ -173,5 +169,4 @@ savedsl(z, "build/truss-bridge-panel.dslb");
 r = system ${dsl_cli(p)} --dsl ${out} build/truss-bridge-pratt.dslb build/truss-bridge-howe.dslb build/truss-bridge-panel.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
-copy_file("build/rendered/truss-bridge.png", "images/truss-bridge.png");
 println("wrote images/truss-bridge.png");

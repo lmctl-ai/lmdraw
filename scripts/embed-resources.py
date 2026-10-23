@@ -3,11 +3,12 @@
 import pathlib
 import sys
 
-schema, regular, bold, output = map(pathlib.Path, sys.argv[1:])
+schema, regular, bold, math_font, output = map(pathlib.Path, sys.argv[1:])
 items = {
     "schema": schema.read_bytes(),
     "noto_regular": regular.read_bytes(),
     "noto_bold": bold.read_bytes(),
+    "noto_math": math_font.read_bytes(),
 }
 lines = ["#pragma once", "#include <cstddef>", "namespace lmdraw::embedded {"]
 for name, data in items.items():

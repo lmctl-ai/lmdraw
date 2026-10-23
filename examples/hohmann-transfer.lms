@@ -8,7 +8,6 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/hohmann-transfer.dslb";
 mkdir("images");
 mkdir("build");
-mkdir("build/rendered");
 
 PI = 3.141592653589793;
 MU = 398600.4418;          # Earth GM, km^3/s^2
@@ -121,11 +120,10 @@ wi.set_attr("stroke", "#4b3f6b");
 wi.set_attr("rx", "8");
 scene.text(612.0, 476.0, 14.0, "What if: plane change", "#b49cf0").set_attr("font-weight", "700");
 scene.text(612.0, 498.0, 12.5, ${whatif}, "#c9d6e2", 256.0);
-scene.render_png("build/rendered/hohmann-transfer.png", 900, 620, 1);
+scene.render_png("images/hohmann-transfer.png", 900, 620, 1);
 end _dsl_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
-copy_file("build/rendered/hohmann-transfer.png", "images/hohmann-transfer.png");
 println("wrote images/hohmann-transfer.png");

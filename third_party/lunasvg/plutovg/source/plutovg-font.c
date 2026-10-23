@@ -210,6 +210,19 @@ static void plutovg_glyph_cache_finish(plutovg_glyph_cache_t* cache, plutovg_fon
 
 #define GLYPH_CACHE_INIT_CAPACITY 128
 
+static stbtt_fontinfo g_fallback_font_info;
+static bool g_has_fallback_font = false;
+
+bool plutovg_font_face_set_fallback_data(const void* data, unsigned int length)
+{
+    (void)length;
+    int offset = stbtt_GetFontOffsetForIndex(data, 0);
+    if(offset == -1 || !stbtt_InitFont(&g_fallback_font_info, data, offset))
+        return false;
+    g_has_fallback_font = true;
+    return true;
+}
+
 static plutovg_glyph_t* plutovg_glyph_cache_get(plutovg_glyph_cache_t* cache, plutovg_font_face_t* face, plutovg_codepoint_t codepoint)
 {
     plutovg_mutex_lock(&face->mutex);
@@ -230,10 +243,45 @@ static plutovg_glyph_t* plutovg_glyph_cache_get(plutovg_glyph_cache_t* cache, pl
         glyph = malloc(sizeof(plutovg_glyph_t));
         glyph->codepoint = codepoint;
         glyph->index = stbtt_FindGlyphIndex(&face->info, codepoint);
-        glyph->nvertices = stbtt_GetGlyphShape(&face->info, glyph->index, &glyph->vertices);
-        stbtt_GetGlyphHMetrics(&face->info, glyph->index, &glyph->advance_width, &glyph->left_side_bearing);
-        if(!stbtt_GetGlyphBox(&face->info, glyph->index, &glyph->x1, &glyph->y1, &glyph->x2, &glyph->y2)) {
+        const stbtt_fontinfo* active_info = &face->info;
+        float fb_scale = 1.0f;
+        if(glyph->index == 0 && codepoint != 0 && g_has_fallback_font) {
+            plutovg_codepoint_t fb_cp = codepoint;
+            int fb_idx = stbtt_FindGlyphIndex(&g_fallback_font_info, fb_cp);
+            if(fb_idx == 0) {
+                if(fb_cp == 0x2714) fb_cp = 0x2713;
+                else if(fb_cp == 0x2717 || fb_cp == 0x2718) fb_cp = 0x2A2F;
+                fb_idx = stbtt_FindGlyphIndex(&g_fallback_font_info, fb_cp);
+            }
+            if(fb_idx != 0) {
+                glyph->index = fb_idx;
+                active_info = &g_fallback_font_info;
+                float s_face = stbtt_ScaleForMappingEmToPixels(&face->info, 1000.0f);
+                float s_fb = stbtt_ScaleForMappingEmToPixels(&g_fallback_font_info, 1000.0f);
+                if(s_face > 0.0f && s_fb > 0.0f)
+                    fb_scale = s_fb / s_face;
+            }
+        }
+        glyph->nvertices = stbtt_GetGlyphShape(active_info, glyph->index, &glyph->vertices);
+        stbtt_GetGlyphHMetrics(active_info, glyph->index, &glyph->advance_width, &glyph->left_side_bearing);
+        if(!stbtt_GetGlyphBox(active_info, glyph->index, &glyph->x1, &glyph->y1, &glyph->x2, &glyph->y2)) {
             glyph->x1 = glyph->y1 = glyph->x2 = glyph->y2 = 0;
+        }
+        if(active_info != &face->info && fabsf(fb_scale - 1.0f) > 1e-4f) {
+            for(int vi = 0; vi < glyph->nvertices; ++vi) {
+                glyph->vertices[vi].x = (stbtt_vertex_type)lroundf(glyph->vertices[vi].x * fb_scale);
+                glyph->vertices[vi].y = (stbtt_vertex_type)lroundf(glyph->vertices[vi].y * fb_scale);
+                glyph->vertices[vi].cx = (stbtt_vertex_type)lroundf(glyph->vertices[vi].cx * fb_scale);
+                glyph->vertices[vi].cy = (stbtt_vertex_type)lroundf(glyph->vertices[vi].cy * fb_scale);
+                glyph->vertices[vi].cx1 = (stbtt_vertex_type)lroundf(glyph->vertices[vi].cx1 * fb_scale);
+                glyph->vertices[vi].cy1 = (stbtt_vertex_type)lroundf(glyph->vertices[vi].cy1 * fb_scale);
+            }
+            glyph->advance_width = (int)lroundf(glyph->advance_width * fb_scale);
+            glyph->left_side_bearing = (int)lroundf(glyph->left_side_bearing * fb_scale);
+            glyph->x1 = (int)lroundf(glyph->x1 * fb_scale);
+            glyph->y1 = (int)lroundf(glyph->y1 * fb_scale);
+            glyph->x2 = (int)lroundf(glyph->x2 * fb_scale);
+            glyph->y2 = (int)lroundf(glyph->y2 * fb_scale);
         }
 
         glyph->next = cache->glyphs[index];

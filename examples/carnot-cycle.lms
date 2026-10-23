@@ -11,7 +11,6 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/carnot-cycle.dslb";
 mkdir("images");
 mkdir("build");
-mkdir("build/rendered");
 
 R = 8.314462618;       # J/(mol K); with V in litres, nRT/V is in kPa
 TH = 500.0;
@@ -112,15 +111,10 @@ scene.text(0.0, 0.0, 14.0, "3", "#e6edf3").set_attr("x", ${st[4]}).set_attr("y",
 scene.text(0.0, 0.0, 14.0, "4", "#e6edf3").set_attr("x", ${st[6]}).set_attr("y", ${st[7]}).set_attr("transform", "translate(-6 -12)").set_attr("font-weight", "700");
 
 # Leg legend in the empty upper right of the plot.
-scene.line(300.0, 140.0, 330.0, 140.0, "#f08a6c", 3.0);
-scene.text(338.0, 145.0, 13.0, "1–2 isothermal at 500 K: heat in", "#e6edf3");
-scene.line(300.0, 164.0, 330.0, 164.0, "#7fa8d0", 3.0);
-scene.text(338.0, 169.0, 13.0, "2–3 and 4–1 adiabatic: no heat", "#e6edf3");
-scene.line(300.0, 188.0, 330.0, 188.0, "#6fbdb4", 3.0);
-scene.text(338.0, 193.0, 13.0, "3–4 isothermal at 300 K: heat out", "#e6edf3");
-scene.rect(300.0, 204.0, 30.0, 14.0, "#b49cf0").set_attr("fill-opacity", "0.32");
-scene.text(338.0, 216.0, 13.0, "enclosed area = net work", "#e6edf3");
-scene.text(300.0, 250.0, 12.0, ${state_txt}, "#9fb3c8");
+scene.legend(296.0, 120.0, "1 → 2 isothermal at 500 K: heat in\n2 → 3 & 4 → 1 adiabatic: Q = 0\n3 → 4 isothermal at 300 K: heat out", "#f08a6c,#7fa8d0,#6fbdb4", "#e6edf3", "none");
+scene.rect(308.0, 204.0, 24.0, 14.0, "#b49cf0").set_attr("fill-opacity", "0.32");
+scene.text(340.0, 216.0, 13.0, "∮ P dV = net work W", "#e6edf3");
+scene.text(308.0, 250.0, 12.0, ${state_txt}, "#9fb3c8");
 
 # Energy flow.
 let panel = scene.rect(600.0, 104.0, 282.0, 232.0, "#16222e");
@@ -159,11 +153,10 @@ let s4 = scene.rect(672.0, 476.0, 10.0, 11.0, "#b49cf0");
 s4.set_attr("width", ${sweep_w[4]});
 scene.text(866.0, 426.0, 12.5, ${sweep_txt}, "#e6edf3").set_attr("text-anchor", "end");
 scene.text(616.0, 516.0, 12.0, "Real engines reach roughly half to two thirds of this limit.", "#9fb3c8", 252.0);
-scene.render_png("build/rendered/carnot-cycle.png", 900, 600, 1);
+scene.render_png("images/carnot-cycle.png", 900, 600, 1);
 end _dsl_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
-copy_file("build/rendered/carnot-cycle.png", "images/carnot-cycle.png");
 println("wrote images/carnot-cycle.png");

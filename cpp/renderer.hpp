@@ -29,6 +29,7 @@ class Renderer {
   virtual void render_svg(const std::string& document, int width, int height,
                           uint32_t background, const std::filesystem::path& output) = 0;
   virtual void add_font(const std::string& family, bool bold, const unsigned char* data, size_t size) = 0;
+  virtual void add_fallback_font(const unsigned char* data, size_t size) = 0;
   virtual bool load_font_file(const std::string& family, bool bold, const std::filesystem::path& path) = 0;
   virtual double measure_text(const std::string& text, float size, bool bold) = 0;
 };

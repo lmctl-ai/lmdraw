@@ -12,4 +12,4 @@ The imported SVG parser and scripted nodes do not implement CSS, browser layout,
 
 lmscript gotchas met while writing examples: integral numbers cross `${...}` as int (10.0 becomes 10) and the block's float() only widens ints, so pass coordinates as strings via set_attr or path/points data, or compute in the block. Lists cannot cross `${}`. Outside the block there is no sin/cos/exp/log (only sqrt and pow); sprintf lacks %e and %x; numeric literals cannot use exponents (write 1000000000.0). `system` throws when the program is missing, so guard optional tools with which(). DSL blocks may define typed fns and may be created inside lmscript fns; several bytecode files passed to one --dsl call share the scene.
 
-The embedded Noto Sans lacks arrows (U+2190..), ∞, ≤, ≥, ≈, ≠, √, ∑, ∫, ∝ and ✓; those render as boxes. Greek, sub/superscripts, °, ×, ±, ½, µ and Ω work.
+The embedded Noto Sans Regular/Bold and Noto Sans Math Regular fallback cover Latin, Greek, Cyrillic, sub/superscripts, arrows (→ ← ↑ ↓ ↔ ⇒ ⇔), and common math symbols (∝, ∞, ≤, ≥, ≈, ≠, √, ∂, ∆, ∇, ∫, ∑, ∏, ✓, °, ×, ±, ½, µ, Ω).

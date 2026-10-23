@@ -1,0 +1,153 @@
+# Kleiber's law of metabolic scaling: B ∝ M^(3/4) across 7 orders of magnitude.
+# From a 15 g shrew to a 100-tonne blue whale, basal metabolic rate scales not
+# with body mass (B ∝ M¹) nor with geometric surface area (B ∝ M^(2/3)), but as
+# the ¾ power of mass: B = B₀ M^(0.75) (fractal vascular network model, West–
+# Brown–Enquist). lmscript fits a log-log least-squares line across 8 mammals
+# and compares the ¾-power law against ⅔-surface and 1-isometric scaling;
+# lmdraw draws the 7-decade × 6-decade log-log plot with Scene.log_axes.
+# Writes images/kleiber-allometry.png (900x620).
+out = ARGV.len() > 0 ? ARGV[0] : "build/kleiber-allometry.dslb";
+mkdir("images");
+mkdir("build");
+
+LN10 = 2.302585092994046;
+fn ln_small(m) {
+  let y = (m - 1.0) / (m + 1.0);
+  let term = y;
+  let total = 0.0;
+  for (k in range(0, 70)) { total = total + term / (2 * k + 1); term = term * y * y; }
+  return 2.0 * total;
+}
+fn log10(x) {
+  let k = 0;
+  let m = x;
+  while (m >= 10.0) { m = m / 10.0; k = k + 1; }
+  while (m < 1.0) { m = m * 10.0; k = k - 1; }
+  return k + ln_small(m) / LN10;
+}
+
+# Representative mammal masses (kg) and measured basal metabolic rates (watts).
+names = ["shrew", "mouse", "rat", "cat", "dog", "human", "elephant", "blue whale"];
+masses = [0.015, 0.030, 0.30, 3.5, 16.0, 70.0, 4500.0, 90000.0];
+watts = [0.16, 0.25, 1.40, 8.7, 27.5, 82.0, 1890.0, 17600.0];
+
+# Ordinary least squares on x = log10(M), y = log10(B).
+n = masses.len();
+sx = 0.0; sy = 0.0; sxx = 0.0; sxy = 0.0;
+for (i in range(0, n)) {
+  let lx = log10(masses[i]);
+  let ly = log10(watts[i]);
+  sx = sx + lx;
+  sy = sy + ly;
+  sxx = sxx + lx * lx;
+  sxy = sxy + lx * ly;
+}
+slope = (n * sxy - sx * sy) / (n * sxx - sx * sx);
+intercept = (sy - slope * sx) / n;
+B0 = pow(10.0, intercept);
+println(sprintf("OLS fit across %d species: B = %.2f * M^%.3f W (Kleiber exponent 3/4 = 0.750)",
+  n, B0, slope));
+assert(abs(slope - 0.75) < 0.015, "fitted exponent must be ~0.75");
+
+# Log-log canvas mapping:
+# X: M = 0.01 .. 100000 kg (log10 = -2 .. +5, 7 decades) on x = 96 .. 558 (66 px/decade)
+# Y: B = 0.1 .. 100000 W   (log10 = -1 .. +5, 6 decades) on y = 110 .. 506 (66 px/decade)
+fn px(m) { return 96.0 + (log10(m) + 2.0) / 7.0 * 462.0; }
+fn py(w) { return 506.0 - (log10(w) + 1.0) / 6.0 * 396.0; }
+
+# Reference lines anchored at 1 kg (B0 ≈ 3.4 W):
+# Kleiber ¾ power, Rubner ⅔ surface law, and isometric 1.0 power (clipped to plot box).
+kleiber_pts = str(px(0.01)) + " " + str(py(B0 * pow(0.01, 0.75))) + " " +
+              str(px(100000.0)) + " " + str(py(B0 * pow(100000.0, 0.75)));
+rubner_pts = str(px(0.01)) + " " + str(py(B0 * pow(0.01, 0.666667))) + " " +
+             str(px(100000.0)) + " " + str(py(B0 * pow(100000.0, 0.666667)));
+iso_m_lo = pow(0.1 / B0, 1.0);
+iso_m_hi = pow(100000.0 / B0, 1.0);
+iso_pts = str(px(iso_m_lo)) + " " + str(py(0.1)) + " " +
+          str(px(iso_m_hi)) + " " + str(py(100000.0));
+
+pt_x = [];
+pt_y = [];
+for (i in range(0, n)) {
+  push(pt_x, str(px(masses[i])));
+  push(pt_y, str(py(watts[i])));
+}
+
+fit_tbl = sprintf("%.3f\n%.2f W\n%.2f W/kg\n%.2f W/kg\n%.0f×",
+  slope, B0,
+  watts[0] / masses[0],
+  watts[7] / masses[7],
+  (watts[0] / masses[0]) / (watts[7] / masses[7]));
+
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 620, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Kleiber's law: metabolic rate B ∝ M¾ across 7 decades", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Log–log axes from shrew (15 g) to blue whale (90 t): a power law B = B₀M^α becomes a straight line of slope α ≈ 0.75", "#9fb3c8");
+
+# Decade grid lines before log_axes.
+for (k in range(0, 8)) {
+  let x = 96.0 + float(k) * 66.0;
+  scene.line(x, 110.0, x, 506.0, "#1d2d3d", 1.0);
+}
+for (k in range(0, 7)) {
+  let y = 110.0 + float(k) * 66.0;
+  scene.line(96.0, y, 558.0, y, "#1d2d3d", 1.0);
+}
+
+# Log-log axes (log_x = true, log_y = true) with decade labels and sub-decade minor ticks.
+scene.log_axes(96.0, 110.0, 462.0, 396.0, 0.01, 100000.0, 0.1, 100000.0, true, true, 6, "#7f97ad");
+scene.text(327.0, 556.0, 13.0, "body mass M (kg, log₁₀ scale: 7 orders of magnitude)", "#9fb3c8").set_attr("text-anchor", "middle");
+let yl = scene.text(28.0, 308.0, 13.0, "basal metabolic power B (W, log₁₀ scale)", "#9fb3c8");
+yl.set_attr("text-anchor", "middle");
+yl.set_attr("transform", "rotate(-90 28 308)");
+
+# Scaling curves.
+scene.polyline(${iso_pts}, "#f08a6c", 1.8).set_attr("stroke-dasharray", "4 4");
+scene.polyline(${rubner_pts}, "#7fa8d0", 2.0).set_attr("stroke-dasharray", "8 4");
+scene.polyline(${kleiber_pts}, "#f5c16c", 3.2);
+
+# Species points and labels.
+scene.circle(0.0, 0.0, 5.2, "#6fbdb4").set_attr("cx", ${pt_x[0]}).set_attr("cy", ${pt_y[0]}).set_attr("stroke", "#0f1720").set_attr("stroke-width", "1.5");
+scene.circle(0.0, 0.0, 5.2, "#6fbdb4").set_attr("cx", ${pt_x[1]}).set_attr("cy", ${pt_y[1]}).set_attr("stroke", "#0f1720").set_attr("stroke-width", "1.5");
+scene.circle(0.0, 0.0, 5.2, "#6fbdb4").set_attr("cx", ${pt_x[2]}).set_attr("cy", ${pt_y[2]}).set_attr("stroke", "#0f1720").set_attr("stroke-width", "1.5");
+scene.circle(0.0, 0.0, 5.2, "#6fbdb4").set_attr("cx", ${pt_x[3]}).set_attr("cy", ${pt_y[3]}).set_attr("stroke", "#0f1720").set_attr("stroke-width", "1.5");
+scene.circle(0.0, 0.0, 5.2, "#6fbdb4").set_attr("cx", ${pt_x[4]}).set_attr("cy", ${pt_y[4]}).set_attr("stroke", "#0f1720").set_attr("stroke-width", "1.5");
+scene.circle(0.0, 0.0, 5.2, "#6fbdb4").set_attr("cx", ${pt_x[5]}).set_attr("cy", ${pt_y[5]}).set_attr("stroke", "#0f1720").set_attr("stroke-width", "1.5");
+scene.circle(0.0, 0.0, 5.2, "#6fbdb4").set_attr("cx", ${pt_x[6]}).set_attr("cy", ${pt_y[6]}).set_attr("stroke", "#0f1720").set_attr("stroke-width", "1.5");
+scene.circle(0.0, 0.0, 5.2, "#6fbdb4").set_attr("cx", ${pt_x[7]}).set_attr("cy", ${pt_y[7]}).set_attr("stroke", "#0f1720").set_attr("stroke-width", "1.5");
+scene.text(0.0, 0.0, 12.0, "shrew (15 g)", "#e6edf3").set_attr("x", ${pt_x[0]}).set_attr("y", ${pt_y[0]}).set_attr("transform", "translate(10 14)");
+scene.text(0.0, 0.0, 12.0, "mouse", "#c9d6e2").set_attr("x", ${pt_x[1]}).set_attr("y", ${pt_y[1]}).set_attr("transform", "translate(10 -6)");
+scene.text(0.0, 0.0, 12.0, "rat", "#c9d6e2").set_attr("x", ${pt_x[2]}).set_attr("y", ${pt_y[2]}).set_attr("transform", "translate(10 4)");
+scene.text(0.0, 0.0, 12.0, "cat (3.5 kg)", "#c9d6e2").set_attr("x", ${pt_x[3]}).set_attr("y", ${pt_y[3]}).set_attr("transform", "translate(10 4)");
+scene.text(0.0, 0.0, 12.0, "dog", "#c9d6e2").set_attr("x", ${pt_x[4]}).set_attr("y", ${pt_y[4]}).set_attr("transform", "translate(-10 -8)").set_attr("text-anchor", "end");
+scene.text(0.0, 0.0, 12.0, "human (82 W)", "#e6edf3").set_attr("x", ${pt_x[5]}).set_attr("y", ${pt_y[5]}).set_attr("transform", "translate(10 6)");
+scene.text(0.0, 0.0, 12.0, "elephant (4.5 t)", "#e6edf3").set_attr("x", ${pt_x[6]}).set_attr("y", ${pt_y[6]}).set_attr("transform", "translate(-10 -8)").set_attr("text-anchor", "end");
+scene.text(0.0, 0.0, 12.0, "blue whale (90 t)", "#e6edf3").set_attr("x", ${pt_x[7]}).set_attr("y", ${pt_y[7]}).set_attr("transform", "translate(-12 -8)").set_attr("text-anchor", "end");
+
+scene.legend(110.0, 124.0,
+  "Kleiber fit: B ∝ M⁰·⁷⁵ (3/4 vascular law)\nRubner surface law: B ∝ M⁰·⁶⁷ (2/3 area)\nisometric scaling: B ∝ M¹·⁰⁰ (constant W/kg)",
+  "#f5c16c,#7fa8d0,#f08a6c", "#e6edf3");
+
+# Right column panels.
+let p1 = scene.rect(592.0, 108.0, 278.0, 232.0, "#16222e");
+p1.set_attr("stroke", "#2c4156");
+p1.set_attr("rx", "8");
+scene.text(608.0, 134.0, 14.0, "Log–log OLS regression", "#e6edf3").set_attr("font-weight", "700");
+scene.text(608.0, 158.0, 12.5, "fitted exponent α\n1 kg intercept B₀\nshrew B / M\nwhale B / M\nspecific rate ratio", "#9fb3c8");
+scene.text(854.0, 158.0, 12.5, ${fit_tbl}, "#e6edf3").set_attr("text-anchor", "end");
+scene.text(608.0, 272.0, 12.0, "Because B / M ∝ M^(−¼), a gram of shrew tissue burns ~55× more power than a gram of whale tissue.", "#9fb3c8", 248.0);
+
+let p2 = scene.rect(592.0, 358.0, 278.0, 220.0, "#1b1a26");
+p2.set_attr("stroke", "#4b3f6b");
+p2.set_attr("rx", "8");
+scene.text(608.0, 384.0, 14.0, "Why log_axes matters", "#b49cf0").set_attr("font-weight", "700");
+scene.text(608.0, 408.0, 12.0, "On linear axes, 99.9% of these species would pile into a single pixel at (0, 0). Scene.log_axes spaces decades evenly, formats 0.01..1000 and 10⁴..10⁵ automatically, and draws sub-decade ticks at 2..9 × 10ᵏ.", "#c9d6e2", 248.0);
+scene.text(608.0, 524.0, 12.0, "Heartbeats scale oppositely (f ∝ M^(−¼)), so mammals live ~10⁹ beats regardless of size.", "#9fb3c8", 248.0);
+
+scene.render_png("images/kleiber-allometry.png", 900, 620, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/kleiber-allometry.png");

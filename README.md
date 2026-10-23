@@ -20,6 +20,11 @@ Each picture is one self-contained example. Paste the command under it into a te
 | <img src="docs/images/carnot-cycle.png" width="290" alt="Carnot cycle on a pressure-volume diagram with the enclosed work shaded"> | <img src="docs/images/lens-ray-diagram.png" width="290" alt="Two ray diagrams for a converging lens: a real inverted image and a virtual magnified one"> | <img src="docs/images/incline-free-body.png" width="290" alt="A crate on a 30 degree ramp with weight, normal, friction and gravity components"> |
 | Enclosed area equals the work, 1153 J; efficiency is 40 % = 1 − Tc/Th<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/carnot-cycle.lms` | Three principal rays to scale: di = 15 cm (m = −0.5) and a 2.5× magnifier<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/lens-ray-diagram.lms` | Forces drawn to scale give a = 3.21 m/s²; sliding starts at 16.7°<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/incline-free-body.lms` |
 
+| Special relativity & cosmic-ray muons | Damped harmonic oscillator regimes | Kleiber's ¾-power metabolic scaling |
+| --- | --- | --- |
+| <img src="docs/images/relativity-lorentz.png" width="290" alt="Lorentz factor gamma, relativistic momentum and length contraction curves with cosmic-ray muon survival"> | <img src="docs/images/damped-oscillator.png" width="290" alt="Underdamped, critically damped and overdamped oscillator curves with phase portrait and Scene.legend"> | <img src="docs/images/kleiber-allometry.png" width="290" alt="Seven-decade log-log plot of mammal basal metabolic rate versus body mass using Scene.log_axes"> |
+| γ = 1/√(1 − β²) → ∞ as v → c; time dilation lets 23.6 % of 15 km muons reach sea level<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/relativity-lorentz.lms` | RK4 across four damping ratios (ζ = 0.15, 0.40, 1.0, 2.0) with `Scene.legend` and phase spiral<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/damped-oscillator.lms` | 7-decade × 6-decade `Scene.log_axes` log–log fit from shrew (15 g) to blue whale (90 t): B ∝ M⁰·⁷⁵<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/kleiber-allometry.lms` |
+
 ### Engineering
 
 | Pratt vs Howe truss | RC low-pass filter |
@@ -48,7 +53,7 @@ Each picture is one self-contained example. Paste the command under it into a te
 | <img src="docs/images/decision-flowchart.png" width="290" alt="Decision flowchart with elbow connectors and arrow markers"> | <img src="docs/images/render-assets.png" width="290" alt="An imported SVG automation ladder rendered to PNG"> |
 | Elbow edges, named markers, measured text wrapping<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/decision-flowchart.lms` | Static SVG files load as retained, editable scenes<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/render-assets.lms` |
 
-All 25 examples, including the API tours (title card, nodes and groups, charts, heat map, tree, table, tweened frames), are listed in [examples/README.md](examples/README.md). `examples/render-all.sh` regenerates every picture above.
+All 28 examples, including the API tours (title card, nodes and groups, charts, heat map, tree, table, tweened frames), are listed in [examples/README.md](examples/README.md). `examples/render-all.sh` regenerates every picture above.
 
 ## Quick start (1 minute)
 
@@ -65,7 +70,7 @@ An lmdraw program is an lmscript file. Plain lmscript computes; the `_dsl_` bloc
 
 ```lmscript
 mkdir("images");
-mkdir("build/rendered");
+mkdir("build");
 v = sqrt(398600.4418 / 6778.137);                       # circular speed at 400 km
 label = sprintf("LEO speed %.2f km/s", v);
 p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
@@ -73,15 +78,14 @@ scene.canvas(640, 200, "#0f1720");
 scene.circle(100.0, 100.0, 60.0, "#4f9fd8");
 scene.arrow(170.0, 100.0, 300.0, 100.0, "#f5c16c", 3.0);
 scene.text(320.0, 106.0, 22.0, ${label}, "#e6edf3");
-scene.render_png("build/rendered/leo.png", 640, 200, 2);
+scene.render_png("images/leo.png", 640, 200, 2);
 end _dsl_
 savedsl(p, "build/leo.dslb");
 r = system ${dsl_cli(p)} --dsl build/leo.dslb;
 assert(r.code == 0);
-copy_file("build/rendered/leo.png", "images/leo.png");
 ```
 
-The scene API: `canvas`, `rect`, `circle`, `ellipse`, `line`, `arrow`, `polyline`, `path` (SVG path data), `text` (with optional wrap width), `axes`, `group`, `image` (PNG data URI), `linear_gradient`, `load_svg`, `load_font`, `measure_text` and `render_png`; every node keeps SVG-style attributes (`set_attr`) and can be changed between frames. Run `lmdraw --dsl-schema` for the exact signatures and read [docs/LLM_GUIDE.md](docs/LLM_GUIDE.md) for attributes, limits and recipes.
+The scene API: `canvas`, `rect`, `circle`, `ellipse`, `line`, `arrow`, `polyline`, `path` (SVG path data), `text` (with optional wrap width), `axes`, `log_axes` (semi-log and log–log decade ticks), `legend` (auto-measured multi-series legend box), `group`, `image` (PNG data URI), `linear_gradient`, `load_svg`, `load_font`, `measure_text` and `render_png`; every node keeps SVG-style attributes (`set_attr`) and can be changed between frames. Run `lmdraw --dsl-schema` for the exact signatures and read [docs/LLM_GUIDE.md](docs/LLM_GUIDE.md) for attributes, limits and recipes.
 
 ## How it works
 
@@ -91,14 +95,14 @@ The scene API: `canvas`, `rect`, `circle`, `ellipse`, `line`, `arrow`, `polyline
   <img src="docs/readme/architecture-light.png" alt="lmscript and the lmdraw schema feed the native host, which renders PNG output; SVG assets can be loaded into a scene" width="100%">
 </picture>
 
-lmdraw is a single static executable (LunaSVG/PlutoVG rasterizer, Noto Sans compiled in). It verifies the bytecode against its embedded schema before running anything, keeps a retained scene of nodes, and writes PNGs atomically. The same binary renders the same bytes on every run.
+lmdraw is a single static executable (LunaSVG/PlutoVG rasterizer, Noto Sans and Noto Sans Math compiled in). It verifies the bytecode against its embedded schema before running anything, keeps a retained scene of nodes, and writes PNGs atomically. The same binary renders the same bytes on every run.
 
 ## Honest limits
 
 - **PNG only.** No SVG or PDF export; animations are numbered PNG frames that you encode with ffmpeg (the GIF examples do this when ffmpeg is installed).
-- **Output folders are fixed.** PNGs go directly under `build/rendered/` (and, from v0.2.4, `images/`); file inputs come only from `assets/` (SVG) and `assets/fonts/` (TrueType). Examples copy their PNG into `images/`.
-- **Glyph coverage.** The embedded Noto Sans covers Latin, Greek and Cyrillic, sub/superscripts and common punctuation, but not arrows (→), ∞, ≤, ≥, ≈ or √. No complex-script shaping or right-to-left layout.
-- **Not a plotting library.** `axes` draws linear ticks only; log scales, legends and curve fitting are done by hand in lmscript (see `rc-lowpass.lms`). For data-heavy charts use [lmplot](https://github.com/lmctl-ai/lmplot).
+- **Output folders are fixed.** PNGs go directly under `images/` or `build/rendered/`; file inputs come only from `assets/` (SVG) and `assets/fonts/` (TrueType).
+- **Glyph coverage.** The embedded Noto Sans Regular/Bold and Noto Sans Math fallback cover Latin, Greek, Cyrillic, sub/superscripts, arrows (→ ← ↑ ↓ ↔ ⇒ ⇔), and common mathematical operators (∝, ∞, ≤, ≥, ≈, ≠, √, ∂, ∆, ∇, ∫, ∑, ∏, ✓). No complex-script OpenType shaping or right-to-left layout.
+- **Lightweight plot helpers, not a statistical charting suite.** `axes`, `log_axes`, and `legend` draw linear/logarithmic axes and multi-series legends; curve sampling and fitting are done in lmscript (see `kleiber-allometry.lms` and `rc-lowpass.lms`). For data-heavy statistical charts use [lmplot](https://github.com/lmctl-ai/lmplot).
 - **No filters.** No blur, drop shadow or radial-gradient constructor; imported SVG must stay within a static subset (no CSS, scripts or external references).
 - **lmscript has no trig or log built-ins** outside the `_dsl_` block (the block itself has `sin`, `cos`, `sqrt`, `pow`); the examples carry short series implementations. Integral numbers cross into a `_dsl_` block as `int`, so pass coordinates as strings or compute them inside the block.
 - Byte-identical output is promised for the same binary; different platforms may differ in the last bits of anti-aliasing.

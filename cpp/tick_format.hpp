@@ -30,4 +30,28 @@ inline std::string tick_label(double value, int decimals) {
   return text;
 }
 
+inline std::string superscript_int(int value) {
+  static const char* const kDigits[10] = {
+      "\xe2\x81\xb0", "\xc2\xb9", "\xc2\xb2", "\xc2\xb3", "\xe2\x81\xb4",
+      "\xe2\x81\xb5", "\xe2\x81\xb6", "\xe2\x81\xb7", "\xe2\x81\xb8", "\xe2\x81\xb9"};
+  std::string digits = std::to_string(std::abs(value));
+  std::string out = value < 0 ? "\xe2\x81\xbb" : "";
+  for (char c : digits) out += kDigits[c - '0'];
+  return out;
+}
+
+// Decade tick label for logarithmic axes: plain decimals for 0.01..1000 and
+// 10^k with Unicode superscripts outside that range.
+inline std::string log_tick_label(int exp10) {
+  switch (exp10) {
+    case -2: return "0.01";
+    case -1: return "0.1";
+    case 0: return "1";
+    case 1: return "10";
+    case 2: return "100";
+    case 3: return "1000";
+    default: return "10" + superscript_int(exp10);
+  }
+}
+
 }  // namespace lmdraw

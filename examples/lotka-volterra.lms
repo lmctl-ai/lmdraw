@@ -11,7 +11,6 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/lotka-volterra.dslb";
 mkdir("images");
 mkdir("build");
-mkdir("build/rendered");
 
 PI = 3.141592653589793;
 AL = 1.1; BE = 0.4; DE = 0.1; GA = 0.4;
@@ -126,11 +125,10 @@ note.set_attr("stroke", "#2c4156");
 note.set_attr("rx", "8");
 scene.text(636.0, 136.0, 14.0, "Why the lag?", "#e6edf3").set_attr("font-weight", "700");
 scene.text(636.0, 158.0, 12.5, "Predators can only multiply after prey is plentiful, and keep eating after prey peaks. So the predator peak trails the prey peak: by a quarter cycle for small swings, less for big ones. The same lag shows in the Hudson's Bay Company lynx and hare fur records.", "#c9d6e2", 232.0);
-scene.render_png("build/rendered/lotka-volterra.png", 900, 640, 1);
+scene.render_png("images/lotka-volterra.png", 900, 640, 1);
 end _dsl_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
-copy_file("build/rendered/lotka-volterra.png", "images/lotka-volterra.png");
 println("wrote images/lotka-volterra.png");

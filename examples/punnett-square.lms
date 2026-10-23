@@ -9,7 +9,6 @@
 out = ARGV.len() > 0 ? ARGV[0] : "build/punnett-square.dslb";
 mkdir("images");
 mkdir("build");
-mkdir("build/rendered");
 
 PI = 3.141592653589793;
 gametes = ["RY", "Ry", "rY", "ry"];
@@ -178,11 +177,10 @@ eg.set_attr("stroke-width", "1");
 eg.set_attr("stroke-dasharray", "3 2");
 scene.text(576.0, 528.0, 13.0, ${chi_txt}, "#e6edf3");
 scene.text(576.0, 552.0, 12.0, ${fisher_txt}, "#9fb3c8", 290.0);
-scene.render_png("build/rendered/punnett-square.png", 900, 640, 1);
+scene.render_png("images/punnett-square.png", 900, 640, 1);
 end _dsl_
 savedsl(p, out);
 r = system ${dsl_cli(p)} --dsl ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
-copy_file("build/rendered/punnett-square.png", "images/punnett-square.png");
 println("wrote images/punnett-square.png");

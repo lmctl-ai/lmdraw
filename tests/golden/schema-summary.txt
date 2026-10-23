@@ -20,10 +20,14 @@ Scene.circle(float, float, float, string) -> Node
 Scene.ellipse(float, float, float, float, string) -> Node
 Scene.group() -> Group
 Scene.image(string, float, float, float, float) -> Node
+Scene.legend(float, float, string, string, string) -> Group
+Scene.legend(float, float, string, string, string, string) -> Group
 Scene.line(float, float, float, float, string, float) -> Node
 Scene.linear_gradient(string, float, float, float, float) -> Gradient
 Scene.load_font(string, string, bool) -> void
 Scene.load_svg(string, string) -> Node
+Scene.log_axes(float, float, float, float, float, float, float, float, bool, bool, int, string) -> Group
+Scene.log_axes(float, float, float, float, float, float, float, float, int, string) -> Group
 Scene.measure_text(string, float, bool) -> float
 Scene.path(string, string, string, float) -> Node
 Scene.polyline(string, string, float) -> Node

@@ -1,6 +1,6 @@
 # Schema and SVG input
 
-The schema has one Scene context and retained Node, Group, and Gradient object types. Constructors cover rectangles, circles, ellipses, lines, polylines, paths, text, images, and groups. Nodes expose set_attr with SVG-style names. Linear gradients use a Gradient handle with stop members. Imported SVG IDs return the same Node handle type.
+The schema has one Scene context and retained Node, Group, and Gradient object types. Constructors cover rectangles, circles, ellipses, lines, arrows, axes, log_axes, legends, polylines, paths, text, images, and groups. Nodes expose set_attr with SVG-style names. Linear gradients use a Gradient handle with stop members. Imported SVG IDs return the same Node handle type.
 
 Canvas coordinates are floating-point pixels with the origin at upper left. Text y is the baseline. Image output uses a scale multiplier, so a 640 by 360 scene at scale 2 produces a 1280 by 720 PNG.
 

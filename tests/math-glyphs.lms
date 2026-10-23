@@ -1,0 +1,13 @@
+p = _dsl_ schema="../schema/lmdraw.dsl.json";
+scene.canvas(320, 120, "#0f1720");
+let w1 = scene.measure_text("∝ → ← ↑ ↓ ↔ ⇒ ⇔ ∞ ≤ ≥ ≈ ≠ √ ∂ ∆ ∇ ∫ ∑ ∏ ✓", 16.0, false);
+let w2 = scene.measure_text("∝", 16.0, false);
+if (w1 <= 10.0 * w2) {
+  scene.canvas(-1, -1, "#0f1720");
+}
+scene.text(12.0, 32.0, 16.0, "∝ → ← ↑ ↓ ↔ ⇒ ⇔ ∞ ≤ ≥ ≈ ≠ √ ∂ ∆ ∇ ∫ ∑ ∏ ✓", "#e6edf3");
+scene.log_axes(36.0, 44.0, 140.0, 52.0, 0.1, 1000.0, 1.0, 100.0, true, true, 4, "#7fa8d0");
+scene.legend(190.0, 44.0, "B ∝ M¾\nγ → ∞", "#f5c16c,#6fbdb4", "#e6edf3");
+scene.render_png("images/lmdraw-math-glyphs.png", 320, 120, 1);
+end _dsl_
+savedsl(p, ARGV.len() > 0 ? ARGV[0] : "build/math-glyphs.dslb");

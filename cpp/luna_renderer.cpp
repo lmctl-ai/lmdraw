@@ -86,6 +86,10 @@ class LunaRenderer final : public Renderer {
       else { regular_data_ = data; regular_size_ = size; }
     }
   }
+  void add_fallback_font(const unsigned char* data, size_t size) override {
+    if (!plutovg_font_face_set_fallback_data(data, static_cast<unsigned int>(size)))
+      throw std::runtime_error("embedded fallback font could not be registered");
+  }
   bool load_font_file(const std::string& family, bool bold, const std::filesystem::path& path) override {
     return lunasvg_add_font_face_from_file(family.c_str(), bold, false, path.string().c_str());
   }
