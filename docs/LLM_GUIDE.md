@@ -90,7 +90,7 @@ Node.set_attr uses SVG-style names. Geometry values and the string-valued attrib
 | Stroke | stroke-width | Positive pixel value |
 | Stroke pattern | stroke-dasharray, stroke-dashoffset | Comma or space separated positive pixel lengths (at most 32 entries), or none; offset is a finite signed pixel length |
 | Markers | marker-start, marker-mid, marker-end | arrow, dot, diamond, or none; supported on constructed line, path, and polyline nodes |
-| Geometry | x, y, width, height, cx, cy, r, rx, ry, x1, y1, x2, y2 | Finite pixels; width, height, and radii must be positive |
+| Geometry | x, y, width, height, cx, cy, r, rx, ry, x1, y1, x2, y2 | Finite pixels; width, height, and `r` must be positive; `rx` and `ry` may be zero |
 | Paths | d, points | Bounded SVG path data or numeric point pairs |
 | Text | font-family, font-size, font-weight, text-anchor | Font family name, positive pixel size, numeric/string weight, start/middle/end anchor |
 | Transform | transform | SVG transform syntax supported by the renderer |

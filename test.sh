@@ -41,12 +41,12 @@ fi
 if command -v nice >/dev/null 2>&1; then nice -n 10 cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; else cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; fi
 ctest --test-dir "$BUILD_DIR" --output-on-failure || fail "C++ unit tests"
 ok "host and C++ raster unit test build"
-[[ "$("$HOST" --version)" == "lmdraw 0.2.2" ]] || fail "--version does not report the CMake project version"
+[[ "$("$HOST" --version)" == "lmdraw 0.2.3" ]] || fail "--version does not report the CMake project version"
 set +e
 "$HOST" --version extra >/dev/null 2>&1; code=$?
 set -e
 [[ $code == 2 ]] || fail "--version extra argument exit $code, expected 2"
-ok "--version prints lmdraw 0.2.2 and rejects extra arguments"
+ok "--version prints lmdraw 0.2.3 and rejects extra arguments"
 "$HOST" --schema --json > "$BUILD_DIR/embedded-schema.json"
 cmp schema/lmdraw.dsl.json "$BUILD_DIR/embedded-schema.json" || fail "embedded schema bytes differ"
 ok "--schema --json is byte-identical to schema/lmdraw.dsl.json"
@@ -157,7 +157,7 @@ set +e
 "$HOST" --dsl "$BUILD_DIR/invalid-ellipse-radius.dslb" >/dev/null 2> "$BUILD_DIR/invalid-ellipse-radius.err"; code=$?
 set -e
 [[ $code == 3 ]] || fail "invalid ellipse radius refusal exit $code, expected 3"
-grep -q 'rx must be positive' "$BUILD_DIR/invalid-ellipse-radius.err" || fail "ellipse radius diagnostic"
+grep -q 'rx must be nonnegative' "$BUILD_DIR/invalid-ellipse-radius.err" || fail "ellipse radius diagnostic"
 ok "invalid ellipse radii are refused before rendering"
 "$LMSCRIPT" tests/refusals/invalid-axes.lms "$BUILD_DIR/invalid-axes.dslb" >/dev/null || fail "invalid axes fixture compile"
 set +e
@@ -166,6 +166,10 @@ set -e
 [[ $code == 3 ]] || fail "invalid axes refusal exit $code, expected 3"
 grep -q 'axes ranges must be increasing' "$BUILD_DIR/invalid-axes.err" || fail "axes range diagnostic"
 ok "invalid axes ranges are refused before node creation"
+"$LMSCRIPT" tests/zero-corner-radius.lms "$BUILD_DIR/zero-corner-radius.dslb" >/dev/null || fail "zero corner radius fixture compile"
+"$HOST" --dsl "$BUILD_DIR/zero-corner-radius.dslb" >/dev/null || fail "zero corner radius render"
+check_png build/rendered/zero-corner-radius.png 120 80 || fail "zero corner radius PNG"
+ok "zero rectangle corner radii remain valid"
 if [[ "$(uname -s)" == Linux* ]]; then
   (umask 027; "$HOST" --dsl "$BUILD_DIR/title-card.dslb" >/dev/null) || fail "umask output run"
   [[ "$(stat -c '%a' build/rendered/title-card.png)" == 640 ]] || fail "PNG mode does not honor umask"

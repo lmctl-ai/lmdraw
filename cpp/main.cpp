@@ -251,8 +251,10 @@ void validate_attr(const std::string& name, const std::string& value) {
     const double n = std::strtod(value.c_str(), &end);
     if (end != value.c_str() + value.size() || !std::isfinite(n) || std::abs(n) > 1'000'000)
       throw dslvm::Error(name + " must be a finite pixel value");
-    if ((name == "width" || name == "height" || name == "r" || name == "rx" || name == "ry") && n <= 0)
+    if ((name == "width" || name == "height" || name == "r") && n <= 0)
       throw dslvm::Error(name + " must be positive");
+    if ((name == "rx" || name == "ry") && n < 0)
+      throw dslvm::Error(name + " must be nonnegative");
   }
   if (name == "fill" || name == "stroke") {
     static const std::regex color(R"(^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$|^[A-Za-z]{1,24}$|^none$)");

@@ -1,0 +1,8 @@
+p = _dsl_ schema="../schema/lmdraw.dsl.json";
+scene.canvas(120, 80, "#152438");
+let card = scene.rect(10.0, 10.0, 100.0, 60.0, "#f5c16c");
+card.set_attr("rx", "0");
+card.set_attr("ry", "0");
+scene.render_png("build/rendered/zero-corner-radius.png", 120, 80, 1);
+end _dsl_
+savedsl(p, "build/zero-corner-radius.dslb");
