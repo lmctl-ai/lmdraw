@@ -1,0 +1,5 @@
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(120, 80, "#152438");
+scene.axes(10.0, 10.0, 90.0, 50.0, 1.0, 0.0, -1.0, 1.0, 4, "#7fa8d0");
+end _dsl_
+savedsl(p, "build/invalid-axes.dslb");

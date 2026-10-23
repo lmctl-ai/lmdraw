@@ -159,6 +159,13 @@ set -e
 [[ $code == 3 ]] || fail "invalid ellipse radius refusal exit $code, expected 3"
 grep -q 'rx must be positive' "$BUILD_DIR/invalid-ellipse-radius.err" || fail "ellipse radius diagnostic"
 ok "invalid ellipse radii are refused before rendering"
+"$LMSCRIPT" tests/refusals/invalid-axes.lms "$BUILD_DIR/invalid-axes.dslb" >/dev/null || fail "invalid axes fixture compile"
+set +e
+"$HOST" --dsl "$BUILD_DIR/invalid-axes.dslb" >/dev/null 2> "$BUILD_DIR/invalid-axes.err"; code=$?
+set -e
+[[ $code == 3 ]] || fail "invalid axes refusal exit $code, expected 3"
+grep -q 'axes ranges must be increasing' "$BUILD_DIR/invalid-axes.err" || fail "axes range diagnostic"
+ok "invalid axes ranges are refused before node creation"
 if [[ "$(uname -s)" == Linux* ]]; then
   (umask 027; "$HOST" --dsl "$BUILD_DIR/title-card.dslb" >/dev/null) || fail "umask output run"
   [[ "$(stat -c '%a' build/rendered/title-card.png)" == 640 ]] || fail "PNG mode does not honor umask"
