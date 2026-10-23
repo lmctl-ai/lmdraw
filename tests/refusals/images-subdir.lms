@@ -2,4 +2,4 @@ p = _dsl_ schema="../../schema/lmdraw.dsl.json";
 scene.canvas(16, 16, "#152438");
 scene.render_png("images/nested/out.png", 16, 16, 1);
 end _dsl_
-savedsl(p, "build/images-subdir.dslb");
+savedsl(p, ARGV.len() > 0 ? ARGV[0] : "build/images-subdir.dslb");

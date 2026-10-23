@@ -245,7 +245,7 @@ from pathlib import Path
 import os,sys
 build=Path(sys.argv[1])
 schema=os.path.relpath(build/'wrong-schema.json', build)
-s=Path('tests/zero-corner-radius.lms').read_text().replace('../schema/lmdraw.dsl.json',schema)
+s=Path('tests/zero-corner-radius.lms').read_text().replace('../schema/lmdraw.dsl.json',schema).replace('"build/zero-corner-radius.dslb"','ARGV[0]')
 (build/'wrong-schema.lms').write_text(s)
 PY
 "$LMSCRIPT" "$BUILD_DIR/wrong-schema.lms" "$BUILD_DIR/wrong-schema.dslb" >/dev/null || fail "wrong-schema fixture compile"
