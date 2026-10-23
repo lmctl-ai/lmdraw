@@ -1,0 +1,7 @@
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(120, 80, "#152438");
+let e = scene.ellipse(60.0, 40.0, 20.0, 12.0, "#f5c16c");
+e.set_attr("rx", "0");
+scene.render_png("build/rendered/invalid-ellipse-radius.png", 120, 80, 1);
+end _dsl_
+savedsl(p, "build/invalid-ellipse-radius.dslb");

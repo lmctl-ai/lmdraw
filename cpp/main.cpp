@@ -246,7 +246,7 @@ void validate_attr(const std::string& name, const std::string& value) {
       throw dslvm::Error(name + " must be a positive number in pixels");
   }
   if (name == "x" || name == "y" || name == "width" || name == "height" || name == "cx" ||
-      name == "cy" || name == "r" || name == "x1" || name == "y1" || name == "x2" || name == "y2") {
+      name == "cy" || name == "r" || name == "rx" || name == "ry" || name == "x1" || name == "y1" || name == "x2" || name == "y2") {
     char* end = nullptr;
     const double n = std::strtod(value.c_str(), &end);
     if (end != value.c_str() + value.size() || !std::isfinite(n) || std::abs(n) > 1'000'000)

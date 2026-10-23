@@ -41,12 +41,12 @@ fi
 if command -v nice >/dev/null 2>&1; then nice -n 10 cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; else cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; fi
 ctest --test-dir "$BUILD_DIR" --output-on-failure || fail "C++ unit tests"
 ok "host and C++ raster unit test build"
-[[ "$("$HOST" --version)" == "lmdraw 0.2.0" ]] || fail "--version does not report the CMake project version"
+[[ "$("$HOST" --version)" == "lmdraw 0.2.1" ]] || fail "--version does not report the CMake project version"
 set +e
 "$HOST" --version extra >/dev/null 2>&1; code=$?
 set -e
 [[ $code == 2 ]] || fail "--version extra argument exit $code, expected 2"
-ok "--version prints lmdraw 0.2.0 and rejects extra arguments"
+ok "--version prints lmdraw 0.2.1 and rejects extra arguments"
 "$HOST" --schema --json > "$BUILD_DIR/embedded-schema.json"
 cmp schema/lmdraw.dsl.json "$BUILD_DIR/embedded-schema.json" || fail "embedded schema bytes differ"
 ok "--schema --json is byte-identical to schema/lmdraw.dsl.json"
@@ -152,6 +152,13 @@ done
 grep -q 'marker-end must be none, arrow, dot, or diamond' "$BUILD_DIR/invalid-marker.err" || fail "marker value diagnostic"
 grep -q 'stroke-dasharray entries must be positive finite pixel lengths' "$BUILD_DIR/invalid-dash.err" || fail "dash value diagnostic"
 ok "invalid marker names and dash lengths are refused with located DSL errors"
+"$LMSCRIPT" tests/refusals/invalid-ellipse-radius.lms "$BUILD_DIR/invalid-ellipse-radius.dslb" >/dev/null || fail "invalid ellipse radius fixture compile"
+set +e
+"$HOST" --dsl "$BUILD_DIR/invalid-ellipse-radius.dslb" >/dev/null 2> "$BUILD_DIR/invalid-ellipse-radius.err"; code=$?
+set -e
+[[ $code == 3 ]] || fail "invalid ellipse radius refusal exit $code, expected 3"
+grep -q 'rx must be positive' "$BUILD_DIR/invalid-ellipse-radius.err" || fail "ellipse radius diagnostic"
+ok "invalid ellipse radii are refused before rendering"
 if [[ "$(uname -s)" == Linux* ]]; then
   (umask 027; "$HOST" --dsl "$BUILD_DIR/title-card.dslb" >/dev/null) || fail "umask output run"
   [[ "$(stat -c '%a' build/rendered/title-card.png)" == 640 ]] || fail "PNG mode does not honor umask"
