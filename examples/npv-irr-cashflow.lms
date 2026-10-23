@@ -1,0 +1,157 @@
+# Should we buy the machine? A capital-budgeting cash-flow diagram.
+# A $100k machine returns $18k, 25k, 30k, 30k, 25k and 30k (incl. salvage) over
+# six years. lmscript discounts each flow at an 8 % cost of capital, sums the
+# net present value, finds the internal rate of return by bisection and the
+# simple and discounted payback times; lmdraw draws the classic engineering-
+# economics cash-flow diagram (arrows up = money in, down = money out, with the
+# present value of each arrow beside it) and the NPV-versus-rate curve.
+# Known answers: NPV(8 %) = +$19.9k, IRR = 13.9 %, payback 3.9 years.
+# Writes images/npv-irr-cashflow.png (900x700).
+out = ARGV.len() > 0 ? ARGV[0] : "build/npv-irr-cashflow.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+
+CF = [-100.0, 18.0, 25.0, 30.0, 30.0, 25.0, 30.0];   # thousand $, end of year t
+RATE = 0.08;
+fn npv(rate) { let total = 0.0; for (t in range(0, CF.len())) { total = total + CF[t] / pow(1.0 + rate, t); } return total; }
+lo = 0.0; hi = 1.0;
+for (i in range(0, 60)) { let mid = (lo + hi) / 2.0; if (npv(mid) > 0.0) { lo = mid; } else { hi = mid; } }
+IRR = (lo + hi) / 2.0;
+NPV = npv(RATE);
+# Paybacks: first time the (discounted) cumulative sum turns positive, interpolated within the year.
+fn payback(rate) {
+  let cum = CF[0];
+  for (t in range(1, CF.len())) {
+    let v = CF[t] / pow(1.0 + rate, t);
+    if (cum + v >= 0.0) { return (t - 1) + (0.0 - cum) / v; }
+    cum = cum + v;
+  }
+  return -1.0;
+}
+PB = payback(0.0);
+DPB = payback(RATE);
+println(sprintf("NPV at %.0f%% = %.2f k$, IRR = %.2f%%, payback %.2f years, discounted payback %.2f years", 100.0 * RATE, NPV, 100.0 * IRR, PB, DPB));
+
+# Cash-flow diagram: years 0..6 at x = 110 + 80 t, timeline y = 240, 1.4 px per k$.
+pv = [];
+for (t in range(0, CF.len())) { push(pv, CF[t] / pow(1.0 + RATE, t)); }
+fn cx(t) { return 110.0 + 80.0 * t; }
+fn cy(v) { return 240.0 - 1.4 * v; }
+amt = []; amt_y = []; tip_y = []; pvl = []; pvl_y = []; xs = []; pv_x = [];
+for (t in range(0, CF.len())) {
+  push(xs, str(cx(t)));
+  push(tip_y, str(cy(CF[t]) + 4.0));
+  push(pv_x, str(cx(t) + 14.0));
+  push(amt, (CF[t] < 0.0 ? "−" : "+") + str(abs(CF[t])) + "k");
+  push(amt_y, str(CF[t] < 0.0 ? cy(CF[t]) + 18.0 : cy(CF[t]) - 8.0));
+  push(pvl, sprintf("%.1f", abs(pv[t])));
+  push(pvl_y, str(CF[t] < 0.0 ? 0.0 : cy(pv[t]) - 6.0));
+}
+pv_d = "";
+for (t in range(1, CF.len())) {
+  pv_d = pv_d + "M " + str(cx(t) + 14.0) + " 240 L " + str(cx(t) + 14.0) + " " + str(cy(pv[t])) + " ";
+}
+# NPV curve, rate 0..30 % on x = 90..560, NPV -30..60 k$ on y = 640..430.
+fn nx(rate) { return 90.0 + rate / 0.30 * 470.0; }
+fn ny(v) { return 640.0 - (v + 30.0) / 90.0 * 210.0; }
+curve = "";
+for (i in range(0, 61)) { let rr = 0.30 * i / 60.0; if (npv(rr) >= -30.0) { curve = curve + (i == 0 ? "" : " ") + str(nx(rr)) + " " + str(ny(npv(rr))); } }
+irr_x = str(nx(IRR));
+zero_y = str(ny(0.0));
+at8 = [str(nx(RATE)), str(ny(NPV))];
+npv_txt = sprintf("+$%.1fk", NPV);
+irr_txt = sprintf("%.1f%%", 100.0 * IRR);
+pb_txt = sprintf("%.1f years", PB);
+dpb_txt = sprintf("%.1f years", DPB);
+irr_lbl = sprintf("IRR %.1f%%", 100.0 * IRR);
+npv_lbl = sprintf("NPV at 8%% = +%.1fk", NPV);
+sum_txt = sprintf("Undiscounted the flows add up to +$%.0fk, but money later is worth less: discounted at 8%% they are worth $%.1fk today against the $100k price.", npv(0.0), NPV + 100.0);
+
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 700, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Is the $100k machine worth buying?", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Cash-flow diagram (arrows up = money in, down = money out) and its present value at an 8 % cost of capital", "#9fb3c8");
+
+# Timeline and flows.
+scene.line(80.0, 240.0, 620.0, 240.0, "#7f97ad", 1.5).set_attr("marker-end", "arrow");
+for (t in range(0, 7)) {
+  scene.line(110.0 + 80.0 * float(t), 236.0, 110.0 + 80.0 * float(t), 244.0, "#7f97ad", 1.0);
+  scene.text(110.0 + 80.0 * float(t) - 6.0, 258.0, 12.0, str(t), "#9fb3c8").set_attr("text-anchor", "end");
+}
+scene.text(624.0, 262.0, 12.0, "year", "#9fb3c8");
+scene.arrow(0.0, 240.0, 0.0, 239.0, "#6fbdb4", 4.0).set_attr("x1", ${xs[1]}).set_attr("x2", ${xs[1]}).set_attr("y2", ${tip_y[1]});
+scene.arrow(0.0, 240.0, 0.0, 239.0, "#6fbdb4", 4.0).set_attr("x1", ${xs[2]}).set_attr("x2", ${xs[2]}).set_attr("y2", ${tip_y[2]});
+scene.arrow(0.0, 240.0, 0.0, 239.0, "#6fbdb4", 4.0).set_attr("x1", ${xs[3]}).set_attr("x2", ${xs[3]}).set_attr("y2", ${tip_y[3]});
+scene.arrow(0.0, 240.0, 0.0, 239.0, "#6fbdb4", 4.0).set_attr("x1", ${xs[4]}).set_attr("x2", ${xs[4]}).set_attr("y2", ${tip_y[4]});
+scene.arrow(0.0, 240.0, 0.0, 239.0, "#6fbdb4", 4.0).set_attr("x1", ${xs[5]}).set_attr("x2", ${xs[5]}).set_attr("y2", ${tip_y[5]});
+scene.arrow(0.0, 240.0, 0.0, 239.0, "#6fbdb4", 4.0).set_attr("x1", ${xs[6]}).set_attr("x2", ${xs[6]}).set_attr("y2", ${tip_y[6]});
+let pvp = scene.path(${pv_d}, "none", "#6fbdb4", 2.0);
+pvp.set_attr("stroke-opacity", "0.6");
+pvp.set_attr("stroke-dasharray", "3 3");
+scene.arrow(110.0, 240.0, 110.0, 380.0, "#f08a6c", 4.0);
+scene.text(118.0, 372.0, 13.0, "−100k purchase", "#f08a6c");
+scene.text(0.0, 0.0, 12.0, ${amt[1]}, "#e6edf3").set_attr("x", ${xs[1]}).set_attr("y", ${amt_y[1]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.0, ${amt[2]}, "#e6edf3").set_attr("x", ${xs[2]}).set_attr("y", ${amt_y[2]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.0, ${amt[3]}, "#e6edf3").set_attr("x", ${xs[3]}).set_attr("y", ${amt_y[3]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.0, ${amt[4]}, "#e6edf3").set_attr("x", ${xs[4]}).set_attr("y", ${amt_y[4]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.0, ${amt[5]}, "#e6edf3").set_attr("x", ${xs[5]}).set_attr("y", ${amt_y[5]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.0, ${amt[6]}, "#e6edf3").set_attr("x", ${xs[6]}).set_attr("y", ${amt_y[6]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 10.5, ${pvl[1]}, "#8fc9c2").set_attr("x", ${pv_x[1]}).set_attr("y", ${pvl_y[1]}).set_attr("text-anchor", "start");
+scene.text(0.0, 0.0, 10.5, ${pvl[2]}, "#8fc9c2").set_attr("x", ${pv_x[2]}).set_attr("y", ${pvl_y[2]}).set_attr("text-anchor", "start");
+scene.text(0.0, 0.0, 10.5, ${pvl[3]}, "#8fc9c2").set_attr("x", ${pv_x[3]}).set_attr("y", ${pvl_y[3]}).set_attr("text-anchor", "start");
+scene.text(0.0, 0.0, 10.5, ${pvl[4]}, "#8fc9c2").set_attr("x", ${pv_x[4]}).set_attr("y", ${pvl_y[4]}).set_attr("text-anchor", "start");
+scene.text(0.0, 0.0, 10.5, ${pvl[5]}, "#8fc9c2").set_attr("x", ${pv_x[5]}).set_attr("y", ${pvl_y[5]}).set_attr("text-anchor", "start");
+scene.text(0.0, 0.0, 10.5, ${pvl[6]}, "#8fc9c2").set_attr("x", ${pv_x[6]}).set_attr("y", ${pvl_y[6]}).set_attr("text-anchor", "start");
+scene.line(250.0, 300.0, 280.0, 300.0, "#6fbdb4", 4.0);
+scene.text(288.0, 305.0, 12.0, "cash received (k$)", "#e6edf3");
+scene.line(250.0, 322.0, 280.0, 322.0, "#6fbdb4", 2.0).set_attr("stroke-dasharray", "3 3");
+scene.text(288.0, 327.0, 12.0, "its present value at 8 % (k$)", "#8fc9c2");
+scene.text(250.0, 352.0, 12.0, ${sum_txt}, "#9fb3c8", 380.0);
+
+# NPV versus discount rate.
+scene.text(40.0, 420.0, 15.0, "NPV as the discount rate rises", "#e6edf3").set_attr("font-weight", "700");
+scene.axes(90.0, 430.0, 470.0, 210.0, 0.0, 30.0, -30.0, 60.0, 6, "#7f97ad");
+scene.text(325.0, 684.0, 12.0, "discount rate (%)", "#9fb3c8").set_attr("text-anchor", "middle");
+let ny = scene.text(34.0, 535.0, 12.0, "NPV (k$)", "#9fb3c8");
+ny.set_attr("text-anchor", "middle");
+ny.set_attr("transform", "rotate(-90 34 535)");
+scene.line(90.0, 570.0, 560.0, 570.0, "#3d556c", 1.0).set_attr("stroke-dasharray", "4 4");
+scene.polyline(${curve}, "#f5c16c", 3.0);
+let ix = scene.circle(0.0, 570.0, 6.0, "#f08a6c");
+ix.set_attr("cx", ${irr_x});
+scene.text(0.0, 592.0, 13.0, ${irr_lbl}, "#f08a6c").set_attr("x", ${irr_x}).set_attr("text-anchor", "middle");
+let p8 = scene.circle(0.0, 0.0, 6.0, "#6fbdb4");
+p8.set_attr("cx", ${at8[0]});
+p8.set_attr("cy", ${at8[1]});
+scene.text(0.0, 0.0, 13.0, ${npv_lbl}, "#6fbdb4").set_attr("x", ${at8[0]}).set_attr("y", ${at8[1]}).set_attr("transform", "translate(12 -10)");
+scene.text(420.0, 520.0, 12.0, "accept: NPV > 0", "#8fd694");
+scene.text(150.0, 625.0, 12.0, "reject: NPV < 0", "#f08a6c");
+
+# Decision panel.
+let panel = scene.rect(660.0, 104.0, 222.0, 300.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(676.0, 130.0, 14.0, "Decision metrics", "#e6edf3").set_attr("font-weight", "700");
+scene.text(676.0, 158.0, 12.0, "net present value at 8 %", "#9fb3c8");
+scene.text(676.0, 182.0, 20.0, ${npv_txt}, "#8fd694").set_attr("font-weight", "700");
+scene.text(676.0, 210.0, 12.0, "internal rate of return", "#9fb3c8");
+scene.text(676.0, 234.0, 20.0, ${irr_txt}, "#e6edf3").set_attr("font-weight", "700");
+scene.text(676.0, 262.0, 12.0, "simple payback", "#9fb3c8");
+scene.text(676.0, 284.0, 16.0, ${pb_txt}, "#e6edf3");
+scene.text(676.0, 310.0, 12.0, "discounted payback", "#9fb3c8");
+scene.text(676.0, 332.0, 16.0, ${dpb_txt}, "#e6edf3");
+scene.text(676.0, 362.0, 12.0, "Buy: the return beats the 8 % cost of capital.", "#8fd694", 194.0);
+let wi = scene.rect(660.0, 430.0, 222.0, 120.0, "#1b1a26");
+wi.set_attr("stroke", "#4b3f6b");
+wi.set_attr("rx", "8");
+scene.text(676.0, 456.0, 14.0, "Reading the curve", "#b49cf0").set_attr("font-weight", "700");
+scene.text(676.0, 478.0, 12.0, "NPV falls as the rate rises. The IRR is the rate where it crosses zero: any project with an IRR above your cost of capital adds value.", "#c9d6e2", 194.0);
+scene.render_png("build/rendered/npv-irr-cashflow.png", 900, 700, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/npv-irr-cashflow.png", "images/npv-irr-cashflow.png");
+println("wrote images/npv-irr-cashflow.png");

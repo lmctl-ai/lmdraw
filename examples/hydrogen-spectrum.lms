@@ -1,0 +1,191 @@
+# Hydrogen atom: why a hydrogen lamp shows exactly four visible lines.
+# Bohr levels E_n = -13.6057 eV / n^2; each emitted photon carries the energy
+# difference of two levels, 1/lambda = R_H (1/n1^2 - 1/n2^2). lmscript computes
+# the levels, the Lyman / Balmer / Paschen wavelengths and their colours; lmdraw
+# draws the level diagram and the spectrum a prism would show.
+# Known answers: H-alpha 656.5 nm (vacuum), series limits 91.2 / 364.7 / 820.6 nm.
+# Writes images/hydrogen-spectrum.png (900x700).
+out = ARGV.len() > 0 ? ARGV[0] : "build/hydrogen-spectrum.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+
+RY_EV = 13.6057;          # Rydberg energy for hydrogen (reduced mass), eV
+R_H = 10967758.3;         # Rydberg constant for hydrogen, 1/m
+
+fn level(n) { return -RY_EV / (n * n); }
+fn wavelength_nm(lo, hi) { return 1000000000.0 / (R_H * (1.0 / (lo * lo) - 1.0 / (hi * hi))); }
+fn ey(e) { return 120.0 + (0.0 - e) * 32.0; }          # energy (eV) -> canvas y
+fn hx(v) { let d = "0123456789abcdef"; let n = clamp(round(v), 0, 255); return char_at(d, floor(n / 16)) + char_at(d, n % 16); }
+# Approximate perceived colour of a wavelength (Bruton's piecewise model).
+fn wl_color(w) {
+  let r = 0.0; let g = 0.0; let b = 0.0;
+  if (w < 440.0) { r = (440.0 - w) / 60.0; b = 1.0; }
+  else if (w < 490.0) { g = (w - 440.0) / 50.0; b = 1.0; }
+  else if (w < 510.0) { g = 1.0; b = (510.0 - w) / 20.0; }
+  else if (w < 580.0) { r = (w - 510.0) / 70.0; g = 1.0; }
+  else if (w < 645.0) { r = 1.0; g = (645.0 - w) / 65.0; }
+  else { r = 1.0; }
+  let f = 1.0;
+  if (w < 420.0) { f = 0.3 + 0.7 * (w - 380.0) / 40.0; }
+  if (w > 700.0) { f = 0.3 + 0.7 * (780.0 - w) / 80.0; }
+  return "#" + hx(255.0 * pow(r * f, 0.8)) + hx(255.0 * pow(g * f, 0.8)) + hx(255.0 * pow(b * f, 0.8));
+}
+fn sx(w) { return 110.0 + (w - 380.0) / 370.0 * 750.0; }  # wavelength (nm) -> strip x
+
+# Level lines n = 1..7 (7 stands in for the crowded top) and the n = infinity line.
+levels_d = "";
+for (n in range(2, 8)) {
+  levels_d = levels_d + "M 110 " + str(ey(level(n))) + " L 560 " + str(ey(level(n))) + " ";
+}
+y1 = ey(level(1));
+
+# Balmer lines (n -> 2): wavelength, colour, photon energy.
+balmer_wl = [];
+balmer_col = [];
+balmer_ev = [];
+for (n in range(3, 7)) {
+  push(balmer_wl, wavelength_nm(2, n));
+  push(balmer_col, wl_color(wavelength_nm(2, n)));
+  push(balmer_ev, level(n) - level(2));
+}
+lyman_lim = wavelength_nm(1, 100000);
+balmer_lim = wavelength_nm(2, 100000);
+paschen_lim = wavelength_nm(3, 100000);
+lyman_a = wavelength_nm(1, 2);
+paschen_a = wavelength_nm(3, 4);
+println(sprintf("H-alpha %.1f nm, H-beta %.1f nm, H-gamma %.1f nm, H-delta %.1f nm",
+  balmer_wl[0], balmer_wl[1], balmer_wl[2], balmer_wl[3]));
+println(sprintf("series limits: Lyman %.1f nm, Balmer %.1f nm, Paschen %.1f nm", lyman_lim, balmer_lim, paschen_lim));
+
+
+# Energy ticks every 2 eV.
+ticks_d = "";
+for (k in range(0, 8)) {
+  let y = ey(-2.0 * k);
+  ticks_d = ticks_d + "M 74 " + str(y) + " L 80 " + str(y) + " ";
+}
+
+# Spectrum strip: continuum gradient stops at the colour model's breakpoints.
+stops = [380.0, 420.0, 440.0, 490.0, 510.0, 580.0, 645.0, 700.0, 750.0];
+stop_col = [];
+for (w in stops) { push(stop_col, wl_color(w)); }
+strip_ticks = "";
+for (w in [400.0, 450.0, 500.0, 550.0, 600.0, 650.0, 700.0, 750.0]) {
+  strip_ticks = strip_ticks + "M " + str(sx(w)) + " 664 L " + str(sx(w)) + " 670 ";
+}
+
+table_nm = sprintf("%.1f nm\n%.1f nm\n%.1f nm\n%.1f nm", balmer_wl[0], balmer_wl[1], balmer_wl[2], balmer_wl[3]);
+table_ev = sprintf("%.2f eV\n%.2f eV\n%.2f eV\n%.2f eV", balmer_ev[0], balmer_ev[1], balmer_ev[2], balmer_ev[3]);
+limits = sprintf("%.1f - %.1f nm (UV)\n%.1f - %.1f nm\n%.0f - %.0f nm (IR)",
+  lyman_lim, lyman_a, balmer_lim, balmer_wl[0], paschen_lim, paschen_a);
+
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+# Geometry in the DSL: y = 120 + |E| * 32 px/eV; strip x = 110 + (lambda - 380) / 370 * 750.
+let RY = 13.6057;
+let RH = 10967758.3;
+let y1 = 120.0 + RY * 32.0;
+let y2 = 120.0 + RY / 4.0 * 32.0;
+let y3 = 120.0 + RY / 9.0 * 32.0;
+let y4 = 120.0 + RY / 16.0 * 32.0;
+let y5 = 120.0 + RY / 25.0 * 32.0;
+let y6 = 120.0 + RY / 36.0 * 32.0;
+let xa = 110.0 + (1000000000.0 / (RH * (0.25 - 1.0 / 9.0)) - 380.0) / 370.0 * 750.0;
+let xb = 110.0 + (1000000000.0 / (RH * (0.25 - 1.0 / 16.0)) - 380.0) / 370.0 * 750.0;
+let xg = 110.0 + (1000000000.0 / (RH * (0.25 - 1.0 / 25.0)) - 380.0) / 370.0 * 750.0;
+let xd = 110.0 + (1000000000.0 / (RH * (0.25 - 1.0 / 36.0)) - 380.0) / 370.0 * 750.0;
+scene.canvas(900, 700, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Hydrogen: four visible lines from one formula", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Eₙ = −13.6 eV / n²  ·  a falling electron emits a photon with λ = hc / ΔE  ·  only jumps that end on n = 2 are visible", "#9fb3c8");
+
+# Energy axis.
+scene.line(80.0, 120.0, 80.0, 120.0 + 14.0 * 32.0, "#5b7690", 1.5);
+scene.path(${ticks_d}, "none", "#5b7690", 1.0);
+for (k in range(0, 8)) {
+  scene.text(70.0, 124.0 + float(k) * 64.0, 12.0, str(-2 * k), "#9fb3c8").set_attr("text-anchor", "end");
+}
+let ylab = scene.text(26.0, 360.0, 13.0, "energy (eV)", "#9fb3c8");
+ylab.set_attr("transform", "rotate(-90 26 360)");
+ylab.set_attr("text-anchor", "middle");
+
+# Levels.
+scene.line(110.0, 120.0, 560.0, 120.0, "#5b7690", 1.0).set_attr("stroke-dasharray", "4 4");
+scene.path(${levels_d}, "none", "#4a6a88", 1.4);
+scene.line(110.0, y1, 560.0, y1, "#7fa8d0", 2.5);
+scene.text(570.0, 124.0, 12.0, "0 eV: ionisation limit", "#9fb3c8");
+scene.text(570.0, 137.0, 12.0, "n = 5, 6 …", "#9fb3c8");
+scene.text(570.0, y4 + 4.0, 12.0, ${sprintf("n = 4  ·  %.2f eV", level(4))}, "#c9d6e2");
+scene.text(570.0, y3 + 4.0, 12.0, ${sprintf("n = 3  ·  %.2f eV", level(3))}, "#c9d6e2");
+scene.text(570.0, y2 + 4.0, 12.0, ${sprintf("n = 2  ·  %.2f eV", level(2))}, "#c9d6e2");
+scene.text(570.0, y1 + 4.0, 12.0, ${sprintf("n = 1  ·  %.2f eV (ground state)", level(1))}, "#e6edf3");
+
+# Lyman (UV, n = 2..5 -> 1) and Paschen (IR, n = 4..6 -> 3) arrows.
+for (n in range(2, 6)) {
+  scene.arrow(150.0 + float(n - 2) * 24.0, 120.0 + RY / float(n * n) * 32.0, 150.0 + float(n - 2) * 24.0, y1 - 2.0, "#b49cf0", 2.0);
+}
+for (n in range(4, 7)) {
+  scene.arrow(470.0 + float(n - 4) * 24.0, 120.0 + RY / float(n * n) * 32.0, 470.0 + float(n - 4) * 24.0, y3 - 2.0, "#f08a6c", 2.0);
+}
+# Balmer arrows coloured by the light they emit.
+scene.arrow(300.0, y3, 300.0, y2 - 2.0, ${balmer_col[0]}, 2.6);
+scene.arrow(332.0, y4, 332.0, y2 - 2.0, ${balmer_col[1]}, 2.6);
+scene.arrow(364.0, y5, 364.0, y2 - 2.0, ${balmer_col[2]}, 2.6);
+scene.arrow(396.0, y6, 396.0, y2 - 2.0, ${balmer_col[3]}, 2.6);
+scene.text(300.0, 252.0, 12.0, "Hα", ${balmer_col[0]}).set_attr("text-anchor", "middle");
+scene.text(332.0, 252.0, 12.0, "Hβ", ${balmer_col[1]}).set_attr("text-anchor", "middle");
+scene.text(364.0, 252.0, 12.0, "Hγ", ${balmer_col[2]}).set_attr("text-anchor", "middle");
+scene.text(396.0, 252.0, 12.0, "Hδ", ${balmer_col[3]}).set_attr("text-anchor", "middle");
+
+scene.text(236.0, y1 - 10.0, 13.0, "Lyman: ultraviolet", "#b49cf0");
+scene.text(348.0, 282.0, 13.0, "Balmer: visible", "#e6edf3").set_attr("text-anchor", "middle");
+scene.text(494.0, 196.0, 13.0, "Paschen: IR", "#f08a6c").set_attr("text-anchor", "middle");
+scene.text(250.0, 340.0, 13.0, "Every jump down to n = 1 releases at least 10.2 eV: ultraviolet. Jumps down to n = 3 release at most 1.51 eV: infrared. Jumps that end on n = 2 release 1.89 to 3.40 eV, which overlaps the 1.65 to 3.26 eV band the eye can see: H-alpha to H-delta, plus a faint H-epsilon at 397 nm.", "#9fb3c8", 300.0);
+
+# Results panel.
+let panel = scene.rect(600.0, 300.0, 270.0, 230.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(616.0, 326.0, 14.0, "Balmer lines (computed)", "#e6edf3").set_attr("font-weight", "700");
+scene.text(616.0, 350.0, 12.5, "Hα\nHβ\nHγ\nHδ", "#e6edf3");
+scene.text(650.0, 350.0, 12.5, "3 to 2\n4 to 2\n5 to 2\n6 to 2", "#9fb3c8");
+scene.text(800.0, 350.0, 12.5, ${table_nm}, "#e6edf3").set_attr("text-anchor", "end");
+scene.text(856.0, 350.0, 12.5, ${table_ev}, "#9fb3c8").set_attr("text-anchor", "end");
+scene.text(616.0, 444.0, 14.0, "Series ranges", "#e6edf3").set_attr("font-weight", "700");
+scene.text(616.0, 468.0, 12.5, "Lyman\nBalmer\nPaschen", "#e6edf3");
+scene.text(680.0, 468.0, 12.5, "to n = 1\nto n = 2\nto n = 3", "#9fb3c8");
+scene.text(856.0, 468.0, 12.5, ${limits}, "#e6edf3").set_attr("text-anchor", "end");
+
+# What a prism shows: continuum (faint) with the four bright emission lines.
+let rainbow = scene.linear_gradient("visible", 0.0, 0.0, 1.0, 0.0);
+rainbow.stop(0.0, ${stop_col[0]});
+rainbow.stop(40.0 / 370.0, ${stop_col[1]});
+rainbow.stop(60.0 / 370.0, ${stop_col[2]});
+rainbow.stop(110.0 / 370.0, ${stop_col[3]});
+rainbow.stop(130.0 / 370.0, ${stop_col[4]});
+rainbow.stop(200.0 / 370.0, ${stop_col[5]});
+rainbow.stop(265.0 / 370.0, ${stop_col[6]});
+rainbow.stop(320.0 / 370.0, ${stop_col[7]});
+rainbow.stop(1.0, ${stop_col[8]});
+scene.rect(110.0, 618.0, 750.0, 46.0, "#05080c");
+scene.rect(110.0, 618.0, 750.0, 46.0, "url(#visible)").set_attr("opacity", "0.16");
+scene.rect(xa - 2.0, 618.0, 4.0, 46.0, ${balmer_col[0]});
+scene.rect(xb - 2.0, 618.0, 4.0, 46.0, ${balmer_col[1]});
+scene.rect(xg - 2.0, 618.0, 4.0, 46.0, ${balmer_col[2]});
+scene.rect(xd - 2.0, 618.0, 4.0, 46.0, ${balmer_col[3]});
+scene.path(${strip_ticks}, "none", "#5b7690", 1.0);
+scene.text(110.0 + 20.0 / 370.0 * 750.0, 686.0, 12.0, "400", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(110.0 + 120.0 / 370.0 * 750.0, 686.0, 12.0, "500", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(110.0 + 220.0 / 370.0 * 750.0, 686.0, 12.0, "600", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(110.0 + 320.0 / 370.0 * 750.0, 686.0, 12.0, "700 nm", "#9fb3c8").set_attr("text-anchor", "middle");
+scene.text(110.0, 594.0, 13.0, "Hydrogen lamp through a prism (wavelength scale)", "#e6edf3");
+scene.text(xa, 612.0, 12.0, ${sprintf("Hα %.0f nm", balmer_wl[0])}, ${balmer_col[0]}).set_attr("text-anchor", "middle");
+scene.text(xb, 612.0, 12.0, ${sprintf("Hβ %.0f", balmer_wl[1])}, ${balmer_col[1]}).set_attr("text-anchor", "middle");
+scene.text(xd + 4.0, 612.0, 12.0, ${sprintf("Hδ %.0f · Hγ %.0f", balmer_wl[3], balmer_wl[2])}, "#b6a8ff").set_attr("text-anchor", "start");
+scene.render_png("build/rendered/hydrogen-spectrum.png", 900, 700, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/hydrogen-spectrum.png", "images/hydrogen-spectrum.png");
+println("wrote images/hydrogen-spectrum.png");

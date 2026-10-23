@@ -1,6 +1,10 @@
 # Cell grid / heat map: an 8 by 8 grid colored by a computed score with a
 # four-level color scale. Buckets come from loops in lmscript grouping
 # cells into one path per level.
+out = ARGV.len() > 0 ? ARGV[0] : "build/heatmap-grid.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
 days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 cell = 40.0;
 gap = 6.0;
@@ -38,9 +42,8 @@ for (i in range(0, 7)) {
   }
 }
 
-out = ARGV.len() > 0 ? ARGV[0] : "build/heatmap-grid.dslb";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
-scene.canvas(620, 560, "#101820");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(620, 480, "#101820");
 
 scene.path(${lvl0}, "#1a2a3a", "#101820", 1.0);
 scene.path(${lvl1}, "#2b4a66", "#101820", 1.0);
@@ -65,14 +68,18 @@ scene.text(406.0, 58.0, 12.0, "7", "#9db4c8").set_attr("text-anchor", "middle");
 scene.text(452.0, 58.0, 12.0, "8", "#9db4c8").set_attr("text-anchor", "middle");
 
 # legend
-scene.rect(float(${x0}), 500.0, float(${cell}), float(${cell}), "#1a2a3a");
-scene.rect(float(${x0 + 1.0 * (cell + gap)}), 500.0, float(${cell}), float(${cell}), "#2b4a66");
-scene.rect(float(${x0 + 2.0 * (cell + gap)}), 500.0, float(${cell}), float(${cell}), "#4a7a9e");
-scene.rect(float(${x0 + 3.0 * (cell + gap)}), 500.0, float(${cell}), float(${cell}), "#f5c16c");
-scene.text(float(${x0 + 4.0 * (cell + gap) + 10.0}), 524.0, 12.0, "score from low to high", "#9db4c8", 78.0).set_attr("text-anchor", "start");
+scene.rect(float(${x0}), 418.0, float(${cell}), float(${cell}), "#1a2a3a");
+scene.rect(float(${x0 + 1.0 * (cell + gap)}), 418.0, float(${cell}), float(${cell}), "#2b4a66");
+scene.rect(float(${x0 + 2.0 * (cell + gap)}), 418.0, float(${cell}), float(${cell}), "#4a7a9e");
+scene.rect(float(${x0 + 3.0 * (cell + gap)}), 418.0, float(${cell}), float(${cell}), "#f5c16c");
+scene.text(float(${x0 + 4.0 * (cell + gap) + 10.0}), 434.0, 12.0, "score from low to high", "#9db4c8", 78.0).set_attr("text-anchor", "start");
 
 scene.text(float(${x0}), 40.0, 18.0, "activity heat map", "#dbe7f3").set_attr("font-weight", "700");
-scene.render_png("build/rendered/heatmap-grid.png", 620, 560, 1);
+scene.render_png("build/rendered/heatmap-grid.png", 620, 480, 1);
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/heatmap-grid.png", "images/heatmap-grid.png");
+println("wrote images/heatmap-grid.png");

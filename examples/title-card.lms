@@ -1,5 +1,10 @@
-out = ARGV.len() > 0 ? ARGV[0] : "build/rendered/title-card";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+# Title card: styled text, shapes and an accent rule on one canvas.
+# Writes images/title-card.png (960x540).
+out = ARGV.len() > 0 ? ARGV[0] : "build/title-card.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(960, 540, "#152438");
 let panel = scene.rect(58.0, 56.0, 844.0, 428.0, "#1f344b");
 panel.set_attr("stroke", "#38536c");
@@ -15,4 +20,8 @@ scene.text(104.0, 436.0, 17.0, "lmdraw / retained vector scene / 2026", "#b8c8d6
 scene.render_png("build/rendered/title-card.png", 960, 540, 1);
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/title-card.png", "images/title-card.png");
+println("wrote images/title-card.png");

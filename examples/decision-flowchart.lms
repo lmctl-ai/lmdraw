@@ -4,7 +4,10 @@
 # (H/V path commands) and named SVG markers. Colors are literal
 # because script fns cannot capture chunk-level lets.
 out = ARGV.len() > 0 ? ARGV[0] : "build/decision-flowchart.dslb";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(960, 560, "#101820");
 
 fn stadium(x: float, y: float, w: float, h: float, title: string) -> void {
@@ -21,7 +24,11 @@ fn process(x: float, y: float, w: float, h: float, title: string) -> void {
   r.set_attr("stroke", "#4a6a88");
   r.set_attr("stroke-width", "2");
   r.set_attr("rx", "8");
-  let label = scene.text(x, y + 5.0, 16.0, title, "#dbe7f3", w - 24.0);
+  # Two-line (wrapped) labels move up half a line to stay centred.
+  let dy = 5.0;
+  let room = w - 24.0;
+  if (scene.measure_text(title, 16.0, false) > room) { dy = -4.6; }
+  let label = scene.text(x, y + dy, 16.0, title, "#dbe7f3", w - 24.0);
   label.set_attr("text-anchor", "middle");
 }
 
@@ -51,14 +58,14 @@ let no_edge = scene.path("M 390.0 310.0 H 320.0 V 398.0", "none", "#d9897a", 2.5
 no_edge.set_attr("marker-end", "diamond");
 let no_tag = scene.text(342.0, 298.0, 14.0, "no", "#d9897a");
 no_tag.set_attr("text-anchor", "middle");
-process(320.0, 430.0, 150.0, 60.0, "collect more samples before retry");
+process(320.0, 430.0, 150.0, 60.0, "collect more samples");
 
 # collect more loops back into collect samples
 let again_edge = scene.path("M 245.0 430.0 H 150.0 V 170.0 H 386.0", "none", "#d9897a", 2.5);
 again_edge.set_attr("marker-end", "arrow");
-let again_tag = scene.text(150.0, 306.0, 13.0, "again", "#d9897a");
+let again_tag = scene.text(140.0, 300.0, 13.0, "again", "#d9897a");
 again_tag.set_attr("text-anchor", "middle");
-again_tag.set_attr("transform", "rotate(-90 150 300)");
+again_tag.set_attr("transform", "rotate(-90 140 300)");
 
 # ship it -> done
 let finish_edge = scene.line(640.0, 460.0, 640.0, 490.0, "#6fbdb4", 2.5);
@@ -67,4 +74,8 @@ stadium(640.0, 518.0, 140.0, 44.0, "done");
 scene.render_png("build/rendered/decision-flowchart.png", 960, 560, 1);
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/decision-flowchart.png", "images/decision-flowchart.png");
+println("wrote images/decision-flowchart.png");

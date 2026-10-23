@@ -68,8 +68,10 @@ The compact schema is grouped by host type. The current members are:
 
 Scene.arrow creates a line with a deterministic arrow marker at its endpoint.
 Scene.axes creates a group containing horizontal and vertical axes, intervals
-evenly spaced tick marks, and numeric labels for both ranges. The returned group
-can be styled or combined with plotted nodes.
+evenly spaced tick marks, and numeric labels for both ranges. Each axis prints
+all of its labels with one decimal count, the fewest that show the tick step
+(0.25 steps print 0.00, 0.25, ...; thirds print two decimals), and never -0.
+The returned group can be styled or combined with plotted nodes.
 
 The exact registry summary and signature list are generated from the live host:
 
@@ -178,7 +180,7 @@ ffmpeg -framerate 24 -start_number 0 -i 'build/rendered/frame-%d.png' -frames:v 
 - Font input: direct child of assets/fonts/, TrueType, at most 8 MiB.
 - Scene image node: embedded PNG data URI, at most 1.5 MiB, with dimensions no larger than 4096 per side and 8,000,000 pixels total.
 - Bytecode input: at most 16 MiB per file. Every file passed to one --dsl invocation is verified before any script runs.
-- PNG outputs: direct child of build/rendered/; symbolic-link targets and path traversal are rejected. Writes use same-directory temporary files and atomic replacement. New file permissions follow the process umask.
+- PNG outputs: direct child of build/rendered/ or (v0.2.4 and later) images/; both directories are created on demand, may not be symbolic links, and symbolic-link targets, subdirectories and path traversal are rejected. Writes use same-directory temporary files and atomic replacement. New file permissions follow the process umask.
 - No network access is performed by the host. VM instruction budgets are not imposed; only host-side input and image bounds apply.
 
 ## Errors and exit codes
@@ -190,9 +192,46 @@ Common fixes:
 - Missing canvas: call scene.canvas or scene.load_svg before creating nodes.
 - Canvas limit: lower dimensions or render scale so the total stays within 8,000,000 pixels.
 - Unsupported SVG: inline presentation attributes and remove CSS, scripts, filters, animation, and external references.
-- Output path refused: write a .png directly below build/rendered/.
+- Output path refused: write a .png directly below build/rendered/ (or images/ with v0.2.4 and later).
 - Text too wide: call scene.measure_text and reduce size or adjust x/text-anchor.
 - Gradient not found: define it on the current scene, add at least two stops, then use url(#id).
+
+## Self-running scripts (lmctl autorun)
+
+Bind the block to the installed host instead of a schema path, then run the
+saved bytecode from the same script. This is the shape of every example:
+
+```lmscript
+out = ARGV.len() > 0 ? ARGV[0] : "build/card.dslb";
+mkdir("images");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(640, 360, "#152438");
+scene.render_png("build/rendered/card.png", 640, 360, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+assert(r.code == 0);
+copy_file("build/rendered/card.png", "images/card.png");
+```
+
+Practical notes:
+
+- `${expr}` inserts an lmscript value as a literal. Integral numbers arrive as
+  `int` (10.0 becomes 10), and `float()` accepts only `int`, so pass computed
+  coordinates as strings (`set_attr("x", ${str(x)})`, path or points data) or
+  compute them inside the block, which has `sin`, `cos`, `sqrt`, `pow`, `floor`,
+  `lerp` and `ease`. Lists cannot cross into a block; index them outside
+  (`${names[2]}`).
+- Plain lmscript has `sqrt` and `pow` but no trigonometric or logarithm
+  functions, and `sprintf` has no `%e` or `%x`; the examples carry short series
+  helpers (`examples/rc-lowpass.lms`, `examples/kepler-second-law.lms`).
+- A block may define typed functions (`fn box(x: float, y: float) -> void { ... }`)
+  and may be created inside an lmscript function; several saved blocks passed to
+  one `lmdraw --dsl a.dslb b.dslb` share one scene (`examples/truss-bridge.lms`).
+- The embedded Noto Sans has no arrow (→), ∞, ≤, ≥, ≈ or √ glyphs; write them out.
+- Optional tools: test with `which("ffmpeg") != null` before calling them, since
+  `system` throws when the program is missing.
 
 ## Verify your script
 

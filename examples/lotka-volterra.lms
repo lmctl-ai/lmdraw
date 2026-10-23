@@ -1,0 +1,136 @@
+# Predator and prey: the Lotka-Volterra cycle.
+# Hares x and lynxes y: dx/dt = a x - b x y, dy/dt = d x y - g y with
+# a = 1.1, b = 0.4, d = 0.1, g = 0.4. lmscript integrates three populations with
+# classic RK4 (dt = 0.01), measures each cycle's period from successive prey
+# peaks, and checks the conserved quantity V = d x - g ln x + b y - a ln y.
+# lmdraw draws the time series (predators lag prey by a quarter cycle) and the
+# phase portrait: closed orbits around the equilibrium (g/d, a/b) = (4, 2.75).
+# Known answers: equilibrium (4, 2.75); small-swing period 2 pi / sqrt(a g) = 9.47;
+# larger swings take longer.
+# Writes images/lotka-volterra.png (900x640).
+out = ARGV.len() > 0 ? ARGV[0] : "build/lotka-volterra.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+
+PI = 3.141592653589793;
+AL = 1.1; BE = 0.4; DE = 0.1; GA = 0.4;
+DT = 0.01;
+fn ln(x) { let y = (x - 1.0) / (x + 1.0); let term = y; let total = 0.0; for (k in range(0, 200)) { total = total + term / (2 * k + 1); term = term * y * y; if (abs(term) < 0.0000000000001) { break; } } return 2.0 * total; }
+fn sci(v) { if (v <= 0.0) { return "0"; } let m = v; let e = 0; while (m < 1.0) { m = m * 10.0; e = e - 1; } while (m >= 10.0) { m = m / 10.0; e = e + 1; } return sprintf("%.1f", m) + "e" + str(e); }
+fn fx(x, y) { return AL * x - BE * x * y; }
+fn fy(x, y) { return DE * x * y - GA * y; }
+fn invariant(x, y) { return DE * x - GA * ln(x) + BE * y - AL * ln(y); }
+# Integrate from (x0, 2.75) for t_end; returns [xs, ys, period, invariant drift].
+fn run(x0, t_end) {
+  let x = x0; let y = AL / BE;
+  let xs = [x]; let ys = [y];
+  let v0 = invariant(x, y);
+  let peaks = [];
+  let prev2 = x; let prev1 = x;
+  let steps = round(t_end / DT);
+  for (i in range(0, steps)) {
+    let k1x = fx(x, y); let k1y = fy(x, y);
+    let k2x = fx(x + DT / 2.0 * k1x, y + DT / 2.0 * k1y); let k2y = fy(x + DT / 2.0 * k1x, y + DT / 2.0 * k1y);
+    let k3x = fx(x + DT / 2.0 * k2x, y + DT / 2.0 * k2y); let k3y = fy(x + DT / 2.0 * k2x, y + DT / 2.0 * k2y);
+    let k4x = fx(x + DT * k3x, y + DT * k3y); let k4y = fy(x + DT * k3x, y + DT * k3y);
+    x = x + DT / 6.0 * (k1x + 2.0 * k2x + 2.0 * k3x + k4x);
+    y = y + DT / 6.0 * (k1y + 2.0 * k2y + 2.0 * k3y + k4y);
+    if (prev1 > prev2 && prev1 >= x) { push(peaks, i * DT); }
+    prev2 = prev1; prev1 = x;
+    if ((i + 1) % 10 == 0) { push(xs, x); push(ys, y); }
+  }
+  let period = (peaks[peaks.len() - 1] - peaks[0]) / (peaks.len() - 1);
+  return [xs, ys, period, abs(invariant(x, y) - v0) / abs(v0)];
+}
+small = 2.0 * PI / sqrt(AL * GA);
+orbits = [run(5.0, 45.0), run(8.0, 45.0), run(12.0, 45.0)];
+for (o in orbits) { println(sprintf("period %.2f (small-swing theory %.2f), invariant drift ", o[2], small) + sci(o[3])); }
+
+# Time series of the largest orbit, t 0..40 on x 80..580, population 0..16 on y 310..110.
+fn tx(t) { return 80.0 + t / 40.0 * 500.0; }
+fn ty(v) { return 310.0 - v / 16.0 * 200.0; }
+big = orbits[2];
+prey_ts = ""; pred_ts = "";
+for (i in range(0, 401)) {
+  prey_ts = prey_ts + str(tx(i * 0.1)) + " " + str(ty(big[0][i])) + " ";
+  pred_ts = pred_ts + str(tx(i * 0.1)) + " " + str(ty(big[1][i])) + " ";
+}
+# Phase portrait: prey 0..16 on x 80..400, predators 0..8 on y 590..390.
+fn px(v) { return 80.0 + v / 16.0 * 320.0; }
+fn py(v) { return 590.0 - v / 8.0 * 200.0; }
+phase = [];
+for (o in orbits) {
+  let pts = "";
+  let n = round(o[2] / (DT * 10.0)) + 2;
+  for (i in range(0, n)) { pts = pts + str(px(o[0][i])) + " " + str(py(o[1][i])) + " "; }
+  push(phase, pts);
+}
+eq = [str(px(GA / DE)), str(py(AL / BE))];
+# A direction arrow on the outer orbit (prey grows first when predators are scarce).
+dir_pts = str(px(big[0][60])) + " " + str(py(big[1][60])) + " " + str(px(big[0][62])) + " " + str(py(big[1][62]));
+periods = sprintf("%.2f\n%.2f\n%.2f", orbits[0][2], orbits[1][2], orbits[2][2]);
+small_txt = sprintf("%.2f", small);
+drift_txt = sci(max(orbits[0][3], max(orbits[1][3], orbits[2][3])));
+
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 640, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Predators chase prey: the Lotka–Volterra cycle", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Hares grow, lynxes feast and multiply, hares crash, lynxes starve, repeat: RK4 integration, dt = 0.01", "#9fb3c8");
+
+scene.axes(80.0, 110.0, 500.0, 200.0, 0.0, 40.0, 0.0, 16.0, 8, "#7f97ad");
+scene.text(330.0, 350.0, 12.0, "time (years)", "#9fb3c8").set_attr("text-anchor", "middle");
+let yl = scene.text(36.0, 210.0, 12.0, "population", "#9fb3c8");
+yl.set_attr("text-anchor", "middle");
+yl.set_attr("transform", "rotate(-90 36 210)");
+scene.polyline(${prey_ts}, "#6fbdb4", 2.5);
+scene.polyline(${pred_ts}, "#f08a6c", 2.5);
+scene.line(440.0, 124.0, 466.0, 124.0, "#6fbdb4", 2.5);
+scene.text(472.0, 129.0, 12.0, "prey (hares)", "#e6edf3");
+scene.line(440.0, 144.0, 466.0, 144.0, "#f08a6c", 2.5);
+scene.text(472.0, 149.0, 12.0, "predators (lynxes)", "#e6edf3");
+
+scene.axes(80.0, 390.0, 320.0, 200.0, 0.0, 16.0, 0.0, 8.0, 8, "#7f97ad");
+scene.text(240.0, 630.0, 12.0, "prey", "#9fb3c8").set_attr("text-anchor", "middle");
+let pl = scene.text(36.0, 490.0, 12.0, "predators", "#9fb3c8");
+pl.set_attr("text-anchor", "middle");
+pl.set_attr("transform", "rotate(-90 36 490)");
+scene.polyline(${phase[0]}, "#b49cf0", 2.0);
+scene.polyline(${phase[1]}, "#7fa8d0", 2.0);
+scene.polyline(${phase[2]}, "#f5c16c", 2.5);
+scene.polyline(${dir_pts}, "#f5c16c", 2.5).set_attr("marker-end", "arrow");
+let eqp = scene.circle(0.0, 0.0, 5.0, "#e6edf3");
+eqp.set_attr("cx", ${eq[0]});
+eqp.set_attr("cy", ${eq[1]});
+scene.text(0.0, 0.0, 12.0, "equilibrium (4, 2.75)", "#e6edf3").set_attr("x", ${eq[0]}).set_attr("y", ${eq[1]}).set_attr("transform", "translate(0 -48)").set_attr("text-anchor", "middle");
+scene.text(420.0, 410.0, 15.0, "Phase portrait", "#e6edf3").set_attr("font-weight", "700");
+scene.text(420.0, 432.0, 12.5, "Plot lynxes against hares and time disappears: each population history is a closed loop, run anticlockwise. Start farther from equilibrium and the loop gets bigger and slower, but never spirals in or out.", "#9fb3c8", 210.0);
+
+let panel = scene.rect(660.0, 380.0, 222.0, 222.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(676.0, 406.0, 14.0, "Measured from RK4", "#e6edf3").set_attr("font-weight", "700");
+scene.text(676.0, 430.0, 12.0, "cycle period (years)", "#9fb3c8");
+scene.line(676.0, 446.0, 696.0, 446.0, "#b49cf0", 2.0);
+scene.line(676.0, 461.0, 696.0, 461.0, "#7fa8d0", 2.0);
+scene.line(676.0, 476.0, 696.0, 476.0, "#f5c16c", 2.5);
+scene.text(704.0, 450.0, 12.5, "start 5 hares\nstart 8 hares\nstart 12 hares", "#c9d6e2");
+scene.text(866.0, 450.0, 12.5, ${periods}, "#e6edf3").set_attr("text-anchor", "end");
+scene.text(676.0, 512.0, 12.0, "theory 2π / sqrt(ag)", "#9fb3c8");
+scene.text(866.0, 512.0, 12.5, ${small_txt}, "#e6edf3").set_attr("text-anchor", "end");
+scene.text(676.0, 540.0, 12.0, "conserved V drift", "#9fb3c8");
+scene.text(866.0, 540.0, 12.5, ${drift_txt}, "#8fd694").set_attr("text-anchor", "end");
+scene.text(676.0, 566.0, 11.0, "V = dx − g ln x + by − a ln y stays constant along each loop.", "#9fb3c8", 196.0);
+let note = scene.rect(620.0, 110.0, 262.0, 168.0, "#16222e");
+note.set_attr("stroke", "#2c4156");
+note.set_attr("rx", "8");
+scene.text(636.0, 136.0, 14.0, "Why the lag?", "#e6edf3").set_attr("font-weight", "700");
+scene.text(636.0, 158.0, 12.5, "Predators can only multiply after prey is plentiful, and keep eating after prey peaks. So the predator peak trails the prey peak: by a quarter cycle for small swings, less for big ones. The same lag shows in the Hudson's Bay Company lynx and hare fur records.", "#c9d6e2", 232.0);
+scene.render_png("build/rendered/lotka-volterra.png", 900, 640, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/lotka-volterra.png", "images/lotka-volterra.png");
+println("wrote images/lotka-volterra.png");

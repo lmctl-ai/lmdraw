@@ -5,3 +5,4 @@ compiler.txt
 build-*.log
 *.dslb
 *.tmp-*
+/images/

@@ -1,0 +1,169 @@
+# Carnot engine between 500 K and 300 K: the P-V loop, its enclosed work,
+# and why efficiency depends only on the two temperatures.
+# One mole of a diatomic ideal gas (gamma = 1.4) expands isothermally from 10 L
+# to 20 L at 500 K, then adiabatically until it cools to 300 K, and returns.
+# lmscript computes the four states, samples each leg, measures the enclosed
+# area with the shoelace formula and compares it with the analytic work
+# W = nR (Th - Tc) ln(V2/V1). lmdraw draws the loop, the energy flow and a
+# what-if sweep of the hot-side temperature.
+# Known answers: Qh = 2881 J, Qc = 1729 J, W = 1153 J, efficiency 40 % = 1 - Tc/Th.
+# Writes images/carnot-cycle.png (900x600).
+out = ARGV.len() > 0 ? ARGV[0] : "build/carnot-cycle.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+
+R = 8.314462618;       # J/(mol K); with V in litres, nRT/V is in kPa
+TH = 500.0;
+TC = 300.0;
+GAMMA = 1.4;
+V1 = 10.0;
+V2 = 20.0;
+fn ln(x) {             # natural log by the atanh series (lmscript has no log)
+  let y = (x - 1.0) / (x + 1.0); let term = y; let total = 0.0;
+  for (k in range(0, 60)) { total = total + term / (2 * k + 1); term = term * y * y; }
+  return 2.0 * total;
+}
+ratio = pow(TH / TC, 1.0 / (GAMMA - 1.0));
+V3 = V2 * ratio;
+V4 = V1 * ratio;
+P1 = R * TH / V1; P2 = R * TH / V2; P3 = R * TC / V3; P4 = R * TC / V4;
+QH = R * TH * ln(V2 / V1);
+QC = R * TC * ln(V3 / V4);
+W = QH - QC;
+ETA = W / QH;
+
+# Sample the loop 1 -> 2 -> 3 -> 4 -> 1 and map to the plot (V 0..80 L, P 0..480 kPa).
+fn X(v) { return 90.0 + v / 80.0 * 470.0; }
+fn Y(p) { return 510.0 - p / 480.0 * 400.0; }
+vs = []; ps = [];
+for (i in range(0, 40)) { let v = V1 + (V2 - V1) * i / 40.0; push(vs, v); push(ps, R * TH / v); }
+for (i in range(0, 40)) { let v = V2 * pow(V3 / V2, i / 40.0); push(vs, v); push(ps, P2 * pow(V2 / v, GAMMA)); }
+for (i in range(0, 40)) { let v = V3 + (V4 - V3) * i / 40.0; push(vs, v); push(ps, R * TC / v); }
+for (i in range(0, 40)) { let v = V4 * pow(V1 / V4, i / 40.0); push(vs, v); push(ps, P4 * pow(V4 / v, GAMMA)); }
+area = 0.0;
+loop_d = "";
+legs = ["", "", "", ""];
+for (i in range(0, vs.len())) {
+  let j = (i + 1) % vs.len();
+  area = area + (vs[i] * ps[j] - vs[j] * ps[i]) / 2.0;
+  loop_d = loop_d + (i == 0 ? "M " : " L ") + str(X(vs[i])) + " " + str(Y(ps[i]));
+  let leg = floor(i / 40);
+  legs[leg] = legs[leg] + (legs[leg] == "" ? "" : " ") + str(X(vs[i])) + " " + str(Y(ps[i])) + " " + str(X(vs[j])) + " " + str(Y(ps[j]));
+}
+area = abs(area);
+println(sprintf("states: V = %.2f / %.2f / %.2f / %.2f L, P = %.1f / %.1f / %.1f / %.1f kPa", V1, V2, V3, V4, P1, P2, P3, P4));
+println(sprintf("Qh = %.1f J, Qc = %.1f J, W = %.1f J (enclosed area %.1f J), efficiency %.2f%% (1 - Tc/Th = %.2f%%)", QH, QC, W, area, 100.0 * ETA, 100.0 * (1.0 - TC / TH)));
+assert(abs(area - W) / W < 0.01, "enclosed area must equal the analytic work");
+
+# Direction arrows at the middle of each leg (short segments with arrow markers).
+mid = [];
+for (leg in range(0, 4)) {
+  let i = leg * 40 + 20;
+  push(mid, str(X(vs[i])) + " " + str(Y(ps[i])) + " " + str(X(vs[i + 1])) + " " + str(Y(ps[i + 1])));
+}
+st = [str(X(V1)), str(Y(P1)), str(X(V2)), str(Y(P2)), str(X(V3)), str(Y(P3)), str(X(V4)), str(Y(P4))];
+qh_txt = sprintf("Qh = %.0f J in", QH);
+w_txt = sprintf("W = %.0f J out", W);
+qc_txt = sprintf("Qc = %.0f J rejected", QC);
+eta_txt = sprintf("%.1f%%", 100.0 * ETA);
+check_txt = sprintf("loop area (shoelace): %.0f J\nanalytic nR(Th−Tc) ln 2: %.0f J", area, W);
+state_txt = sprintf("1: %.0f L, %.0f kPa\n2: %.0f L, %.0f kPa\n3: %.1f L, %.1f kPa\n4: %.1f L, %.1f kPa", V1, P1, V2, P2, V3, P3, V4, P4);
+# Energy-flow bar: 250 px for Qh.
+w_px = str(250.0 * ETA);
+qc_x = str(616.0 + 250.0 * ETA);
+qc_px = str(250.0 * (1.0 - ETA));
+# What-if: efficiency for other hot-side temperatures (Tc = 300 K).
+sweep_t = [400.0, 500.0, 600.0, 800.0, 1200.0];
+sweep_w = [];
+sweep_txt = "";
+for (t in sweep_t) { push(sweep_w, str(160.0 * (1.0 - TC / t))); sweep_txt = sweep_txt + sprintf("%.0f%%\n", 100.0 * (1.0 - TC / t)); }
+
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 600, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Carnot engine: work is the area inside the loop", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "1 mol diatomic ideal gas between a 500 K source and a 300 K sink: two isotherms, two adiabats", "#9fb3c8");
+
+let ax = scene.axes(90.0, 110.0, 470.0, 400.0, 0.0, 80.0, 0.0, 480.0, 8, "#7f97ad");
+scene.text(325.0, 562.0, 13.0, "volume V (L)", "#9fb3c8").set_attr("text-anchor", "middle");
+let yl = scene.text(30.0, 310.0, 13.0, "pressure P (kPa)", "#9fb3c8");
+yl.set_attr("text-anchor", "middle");
+yl.set_attr("transform", "rotate(-90 30 310)");
+
+let work = scene.path(${loop_d + " Z"}, "#b49cf0", "none", 1.0);
+work.set_attr("fill-opacity", "0.32");
+scene.polyline(${legs[0]}, "#f08a6c", 3.0);
+scene.polyline(${legs[1]}, "#7fa8d0", 3.0);
+scene.polyline(${legs[2]}, "#6fbdb4", 3.0);
+scene.polyline(${legs[3]}, "#7fa8d0", 3.0);
+scene.polyline(${mid[0]}, "#f08a6c", 3.0).set_attr("marker-end", "arrow");
+scene.polyline(${mid[1]}, "#7fa8d0", 3.0).set_attr("marker-end", "arrow");
+scene.polyline(${mid[2]}, "#6fbdb4", 3.0).set_attr("marker-end", "arrow");
+scene.polyline(${mid[3]}, "#7fa8d0", 3.0).set_attr("marker-end", "arrow");
+
+# State points.
+scene.circle(0.0, 0.0, 5.0, "#e6edf3").set_attr("cx", ${st[0]}).set_attr("cy", ${st[1]});
+scene.circle(0.0, 0.0, 5.0, "#e6edf3").set_attr("cx", ${st[2]}).set_attr("cy", ${st[3]});
+scene.circle(0.0, 0.0, 5.0, "#e6edf3").set_attr("cx", ${st[4]}).set_attr("cy", ${st[5]});
+scene.circle(0.0, 0.0, 5.0, "#e6edf3").set_attr("cx", ${st[6]}).set_attr("cy", ${st[7]});
+scene.text(0.0, 0.0, 14.0, "1", "#e6edf3").set_attr("x", ${st[0]}).set_attr("y", ${st[1]}).set_attr("transform", "translate(-16 -6)").set_attr("font-weight", "700");
+scene.text(0.0, 0.0, 14.0, "2", "#e6edf3").set_attr("x", ${st[2]}).set_attr("y", ${st[3]}).set_attr("transform", "translate(8 -8)").set_attr("font-weight", "700");
+scene.text(0.0, 0.0, 14.0, "3", "#e6edf3").set_attr("x", ${st[4]}).set_attr("y", ${st[5]}).set_attr("transform", "translate(8 -8)").set_attr("font-weight", "700");
+scene.text(0.0, 0.0, 14.0, "4", "#e6edf3").set_attr("x", ${st[6]}).set_attr("y", ${st[7]}).set_attr("transform", "translate(-6 -12)").set_attr("font-weight", "700");
+
+# Leg legend in the empty upper right of the plot.
+scene.line(300.0, 140.0, 330.0, 140.0, "#f08a6c", 3.0);
+scene.text(338.0, 145.0, 13.0, "1–2 isothermal at 500 K: heat in", "#e6edf3");
+scene.line(300.0, 164.0, 330.0, 164.0, "#7fa8d0", 3.0);
+scene.text(338.0, 169.0, 13.0, "2–3 and 4–1 adiabatic: no heat", "#e6edf3");
+scene.line(300.0, 188.0, 330.0, 188.0, "#6fbdb4", 3.0);
+scene.text(338.0, 193.0, 13.0, "3–4 isothermal at 300 K: heat out", "#e6edf3");
+scene.rect(300.0, 204.0, 30.0, 14.0, "#b49cf0").set_attr("fill-opacity", "0.32");
+scene.text(338.0, 216.0, 13.0, "enclosed area = net work", "#e6edf3");
+scene.text(300.0, 250.0, 12.0, ${state_txt}, "#9fb3c8");
+
+# Energy flow.
+let panel = scene.rect(600.0, 104.0, 282.0, 232.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(616.0, 130.0, 15.0, "Energy per cycle", "#e6edf3").set_attr("font-weight", "700");
+scene.rect(616.0, 146.0, 250.0, 16.0, "#f08a6c");
+scene.text(616.0, 182.0, 13.0, ${qh_txt}, "#f08a6c");
+let wb = scene.rect(616.0, 192.0, 10.0, 16.0, "#f5c16c");
+wb.set_attr("width", ${w_px});
+let cb = scene.rect(616.0, 192.0, 10.0, 16.0, "#6fbdb4");
+cb.set_attr("x", ${qc_x});
+cb.set_attr("width", ${qc_px});
+scene.text(616.0, 228.0, 13.0, ${w_txt}, "#f5c16c");
+scene.text(866.0, 228.0, 13.0, ${qc_txt}, "#6fbdb4").set_attr("text-anchor", "end");
+scene.text(616.0, 262.0, 13.0, "efficiency W / Qh", "#9fb3c8");
+scene.text(866.0, 262.0, 20.0, ${eta_txt}, "#e6edf3").set_attr("text-anchor", "end").set_attr("font-weight", "700");
+scene.text(616.0, 290.0, 11.5, ${check_txt}, "#9fb3c8");
+
+# What-if sweep.
+let wi = scene.rect(600.0, 352.0, 282.0, 196.0, "#1b1a26");
+wi.set_attr("stroke", "#4b3f6b");
+wi.set_attr("rx", "8");
+scene.text(616.0, 378.0, 14.0, "What if the source were hotter?", "#b49cf0").set_attr("font-weight", "700");
+scene.text(616.0, 398.0, 12.0, "Carnot limit 1 − Tc/Th with Tc = 300 K", "#9fb3c8");
+scene.text(616.0, 426.0, 12.5, "400 K\n500 K\n600 K\n800 K\n1200 K", "#e6edf3");
+let s0 = scene.rect(672.0, 416.0, 10.0, 11.0, "#b49cf0");
+s0.set_attr("width", ${sweep_w[0]});
+let s1 = scene.rect(672.0, 431.0, 10.0, 11.0, "#f5c16c");
+s1.set_attr("width", ${sweep_w[1]});
+let s2 = scene.rect(672.0, 446.0, 10.0, 11.0, "#b49cf0");
+s2.set_attr("width", ${sweep_w[2]});
+let s3 = scene.rect(672.0, 461.0, 10.0, 11.0, "#b49cf0");
+s3.set_attr("width", ${sweep_w[3]});
+let s4 = scene.rect(672.0, 476.0, 10.0, 11.0, "#b49cf0");
+s4.set_attr("width", ${sweep_w[4]});
+scene.text(866.0, 426.0, 12.5, ${sweep_txt}, "#e6edf3").set_attr("text-anchor", "end");
+scene.text(616.0, 516.0, 12.0, "Real engines reach roughly half to two thirds of this limit.", "#9fb3c8", 252.0);
+scene.render_png("build/rendered/carnot-cycle.png", 900, 600, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/carnot-cycle.png", "images/carnot-cycle.png");
+println("wrote images/carnot-cycle.png");

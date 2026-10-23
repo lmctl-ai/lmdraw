@@ -19,11 +19,28 @@ ew,eh=int(sys.argv[2]),int(sys.argv[3])
 assert (not ew or w == ew) and (not eh or h == eh), (sys.argv[1],w,h,ew,eh)
 PY
 }
-for image in examples/renders/*.png; do
-  [[ -s "$image" && $(wc -c < "$image" | tr -d ' ') -lt 20480 ]] || fail "preview is missing or over 20 KiB: $image"
-  check_png "$image" || fail "invalid preview PNG: $image"
-done
-ok "example preview PNGs are valid and below 20 KiB"
+trap 'rm -rf "$HERE/images"' EXIT
+# README gallery: every autorun URL names an existing example, every picture exists
+# with valid PNG/GIF magic bytes and stays within the size budget.
+readme_lms=0
+while read -r lms; do
+  [[ -f "$lms" ]] || fail "README references a missing example: $lms"
+  readme_lms=$((readme_lms+1))
+done < <(grep -oE 'raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/[A-Za-z0-9_.-]+\.lms' README.md | sed 's|.*/main/||' | sort -u)
+[[ $readme_lms -ge 12 ]] || fail "expected at least 12 lmctl autorun examples in README.md, found $readme_lms"
+if grep -nE '\[Source\]|see source' README.md; then fail "README still links sources instead of lmctl autorun commands"; fi
+readme_img=0
+while read -r img; do
+  [[ -s "$img" ]] || fail "README references a missing image: $img"
+  bytes=$(wc -c < "$img" | tr -d ' ')
+  case "$img" in
+    *.png) check_png "$img" || fail "invalid PNG: $img"; [[ $bytes -le 307200 ]] || fail "$img exceeds 300 KB";;
+    *.gif) [[ "$(head -c 6 "$img")" == GIF8[79]a ]] || fail "invalid GIF: $img"; [[ $bytes -le 3145728 ]] || fail "$img exceeds 3 MB";;
+  esac
+  readme_img=$((readme_img+1))
+done < <(grep -oE 'docs/[A-Za-z0-9_/.-]+\.(png|gif)' README.md | sort -u)
+[[ $readme_img -ge 12 ]] || fail "expected at least 12 README images, found $readme_img"
+ok "README: $readme_lms autorun examples exist and $readme_img images have valid PNG/GIF headers"
 mkdir -p build/rendered
 scripts/sync-sdk.sh --verify >/dev/null || fail "SDK lock mismatch"
 ok "vendored SDK hash matches sdk.lock"
@@ -41,12 +58,12 @@ fi
 if command -v nice >/dev/null 2>&1; then nice -n 10 cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; else cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; fi
 ctest --test-dir "$BUILD_DIR" --output-on-failure || fail "C++ unit tests"
 ok "host and C++ raster unit test build"
-[[ "$("$HOST" --version)" == "lmdraw 0.2.3" ]] || fail "--version does not report the CMake project version"
+[[ "$("$HOST" --version)" == "lmdraw 0.2.4" ]] || fail "--version does not report the CMake project version"
 set +e
 "$HOST" --version extra >/dev/null 2>&1; code=$?
 set -e
 [[ $code == 2 ]] || fail "--version extra argument exit $code, expected 2"
-ok "--version prints lmdraw 0.2.3 and rejects extra arguments"
+ok "--version prints lmdraw 0.2.4 and rejects extra arguments"
 "$HOST" --schema --json > "$BUILD_DIR/embedded-schema.json"
 cmp schema/lmdraw.dsl.json "$BUILD_DIR/embedded-schema.json" || fail "embedded schema bytes differ"
 ok "--schema --json is byte-identical to schema/lmdraw.dsl.json"
@@ -73,15 +90,32 @@ print(f'{len(signatures)} signatures listed in compact summary')
 PY
 ok "summary golden and registry signatures match the compiler"
 
-for example in title-card node-tour render-assets animated-ladder flow-pipeline decision-flowchart tree-org table-metrics chart-bars-lines heatmap-grid geometry-ellipse arrow-helper tween-morph; do
-  "$LMSCRIPT" "examples/$example.lms" "$BUILD_DIR/$example.dslb" > /dev/null || fail "$example compile"
+# Examples run themselves (savedsl + system lmdraw --dsl) exactly as lmctl autorun
+# does; the freshly built host is first on PATH so cli="lmdraw" binds to it.
+PATH="$HERE/$BUILD_DIR:$PATH"; export PATH
+rm -rf images
+example_count=0
+for src in examples/*.lms; do
+  example="$(basename "$src" .lms)"
+  "$LMSCRIPT" "$src" "$BUILD_DIR/$example.dslb" > "$BUILD_DIR/example-$example.log" 2>&1 || { cat "$BUILD_DIR/example-$example.log" >&2; fail "$example compile/self-run"; }
   python3 - "$BUILD_DIR/$example.dslb" <<'PY' || fail "example is not bytecode v5"
 from pathlib import Path
 import sys
 assert Path(sys.argv[1]).read_bytes()[:6] == b'DSLB\x00\x05'
 PY
+  check_png "images/$example.png" || fail "$example did not write a valid images/$example.png"
+  example_count=$((example_count+1))
 done
-ok "thirteen examples compile to bytecode v5"
+[[ $example_count -ge 25 ]] || fail "expected at least 25 examples, found $example_count"
+if command -v ffmpeg >/dev/null 2>&1; then
+  for gif in kepler-second-law animated-ladder tween-morph; do
+    [[ "$(head -c 6 "images/$gif.gif")" == GIF8[79]a ]] || fail "$gif did not write a GIF"
+  done
+  gif_note="and their GIFs"
+else
+  gif_note="(ffmpeg not found: GIF encoding skipped)"
+fi
+ok "$example_count examples compile to bytecode v5 and self-run into images/ $gif_note"
 "$HOST" --dsl "$BUILD_DIR/title-card.dslb" "$BUILD_DIR/node-tour.dslb" > "$BUILD_DIR/multi.out" || fail "multi-file execution"
 [[ "$(wc -l < "$BUILD_DIR/multi.out" | tr -d ' ')" == 2 ]] || fail "multi-file result count"
 ok "all bytecode files load before ordered execution"
@@ -103,7 +137,7 @@ ok "24 frames are distinct and byte-identical on rerender"
 check_png build/rendered/title-card.png 960 540 || fail "title-card dimensions"
 ok "title-card PNG has expected dimensions"
 
-for spec in flow-pipeline:960:420 decision-flowchart:960:560 tree-org:960:520 table-metrics:960:430 chart-bars-lines:800:460 heatmap-grid:620:560 geometry-ellipse:800:460 arrow-helper:900:600; do
+for spec in flow-pipeline:960:420 decision-flowchart:960:560 tree-org:960:520 table-metrics:960:430 chart-bars-lines:800:460 heatmap-grid:620:480 geometry-ellipse:800:460 arrow-helper:900:600; do
   IFS=: read -r example w h <<< "$spec"
   "$HOST" --dsl "$BUILD_DIR/$example.dslb" > /dev/null || fail "$example run"
   check_png "build/rendered/$example.png" "$w" "$h" || fail "$example PNG"
@@ -170,6 +204,21 @@ ok "invalid axes ranges are refused before node creation"
 "$HOST" --dsl "$BUILD_DIR/zero-corner-radius.dslb" >/dev/null || fail "zero corner radius render"
 check_png build/rendered/zero-corner-radius.png 120 80 || fail "zero corner radius PNG"
 ok "zero rectangle corner radii remain valid"
+rm -f images/lmdraw-test-output.png
+"$LMSCRIPT" tests/images-output.lms "$BUILD_DIR/images-output.dslb" >/dev/null || fail "images output fixture compile"
+"$HOST" --dsl "$BUILD_DIR/images-output.dslb" >/dev/null || fail "images output render"
+check_png images/lmdraw-test-output.png 64 32 || fail "images/ output PNG"
+for fixture in images-subdir images-traversal; do
+  "$LMSCRIPT" "tests/refusals/$fixture.lms" "$BUILD_DIR/$fixture.dslb" >/dev/null || fail "$fixture fixture compile"
+  set +e
+  "$HOST" --dsl "$BUILD_DIR/$fixture.dslb" >/dev/null 2> "$BUILD_DIR/$fixture.err"; code=$?
+  set -e
+  [[ $code == 3 ]] || fail "$fixture refusal exit $code, expected 3"
+done
+grep -q 'PNG output must remain directly under images/' "$BUILD_DIR/images-subdir.err" || fail "images subdirectory diagnostic"
+grep -q 'PNG output traversal is refused' "$BUILD_DIR/images-traversal.err" || fail "images traversal diagnostic"
+[[ ! -e escaped.png && ! -e images/nested ]] || fail "refused images/ output left files behind"
+ok "images/ is a second PNG output root; subdirectories and traversal are refused"
 if [[ "$(uname -s)" == Linux* ]]; then
   (umask 027; "$HOST" --dsl "$BUILD_DIR/title-card.dslb" >/dev/null) || fail "umask output run"
   [[ "$(stat -c '%a' build/rendered/title-card.png)" == 640 ]] || fail "PNG mode does not honor umask"
@@ -196,7 +245,7 @@ from pathlib import Path
 import os,sys
 build=Path(sys.argv[1])
 schema=os.path.relpath(build/'wrong-schema.json', build)
-s=Path('examples/title-card.lms').read_text().replace('../schema/lmdraw.dsl.json',schema)
+s=Path('tests/zero-corner-radius.lms').read_text().replace('../schema/lmdraw.dsl.json',schema)
 (build/'wrong-schema.lms').write_text(s)
 PY
 "$LMSCRIPT" "$BUILD_DIR/wrong-schema.lms" "$BUILD_DIR/wrong-schema.dslb" >/dev/null || fail "wrong-schema fixture compile"

@@ -1,6 +1,9 @@
 # A compact coordinate frame using the retained arrow helper.
 out = ARGV.len() > 0 ? ARGV[0] : "build/arrow-helper.dslb";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(900, 600, "#101820");
 scene.axes(110.0, 70.0, 700.0, 430.0, 0.0, 10.0, -1.0, 1.0, 5, "#7fa8d0");
 let trajectory = scene.polyline("110 370 180 330 250 286 320 250 390 232 460 238 530 268 600 314 670 374 740 430 810 458", "#6fbdb4", 4.0);
@@ -16,3 +19,8 @@ scene.text(688.0, 125.0, 14.0, "trajectory", "#dbe7f3");
 scene.render_png("build/rendered/arrow-helper.png", 900, 600, 1);
 end _dsl_
 savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/arrow-helper.png", "images/arrow-helper.png");
+println("wrote images/arrow-helper.png");

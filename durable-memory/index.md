@@ -8,3 +8,4 @@ Read this index first. Open other notes only when their topic is needed.
 - 04-gotchas.md records path, lifetime, font, and rendering constraints.
 - 05-open-items.md lists deliberate first-release gaps.
 - 06-licensing-and-release.md records bundled component notices and release contents.
+- 07-examples-and-images.md lists the examples, their self-running shape, and how README pictures are produced.

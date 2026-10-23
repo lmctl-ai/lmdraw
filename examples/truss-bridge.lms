@@ -1,0 +1,177 @@
+# Pratt vs Howe truss: which members pull and which push?
+# A 16 m, four-panel bridge truss, 4 m deep, carries 30 kN at each interior
+# deck joint. lmscript writes the 16 joint-equilibrium equations (method of
+# joints), solves them by Gaussian elimination with partial pivoting and checks
+# the reactions; lmdraw draws each member with thickness proportional to its
+# force: blue in tension, red in compression. The only difference between the
+# two designs is which way the interior diagonals lean.
+# Known answers: reactions 45 kN each; end diagonals -63.6 kN; mid top chord -60 kN (Pratt), -45 kN (Howe);
+# Pratt interior diagonals +21.2 kN (tension), Howe interior diagonals -21.2 kN.
+# Writes images/truss-bridge.png (900x700).
+out = ARGV.len() > 0 ? ARGV[0] : "build/truss-bridge.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+
+# Joints: L0..L4 along the deck, U1..U3 on top (metres).
+JX = [0.0, 4.0, 8.0, 12.0, 16.0, 4.0, 8.0, 12.0];
+JY = [0.0, 0.0, 0.0, 0.0, 0.0, 4.0, 4.0, 4.0];
+NAMES = ["L0", "L1", "L2", "L3", "L4", "U1", "U2", "U3"];
+LOAD = 30.0;                                        # kN at L1, L2, L3
+common = [[0, 1], [1, 2], [2, 3], [3, 4], [5, 6], [6, 7], [0, 5], [7, 4], [1, 5], [2, 6], [3, 7]];
+pratt = concat(common, [[5, 2], [7, 2]]);           # diagonals lean down to mid-span
+howe = concat(common, [[1, 6], [3, 6]]);            # diagonals lean up to mid-span
+
+fn solve(a, b) {                                    # Gaussian elimination, partial pivoting
+  let n = b.len();
+  for (c in range(0, n)) {
+    let best = c;
+    for (r in range(c + 1, n)) { if (abs(a[r][c]) > abs(a[best][c])) { best = r; } }
+    let tr = a[c]; a[c] = a[best]; a[best] = tr;
+    let tb = b[c]; b[c] = b[best]; b[best] = tb;
+    for (r in range(c + 1, n)) {
+      let f = a[r][c] / a[c][c];
+      if (f != 0.0) { for (k in range(c, n)) { a[r][k] = a[r][k] - f * a[c][k]; } b[r] = b[r] - f * b[c]; }
+    }
+  }
+  let x = [];
+  for (i in range(0, n)) { push(x, 0.0); }
+  for (ii in range(0, n)) {
+    let i = n - 1 - ii;
+    let s = b[i];
+    for (k in range(i + 1, n)) { s = s - a[i][k] * x[k]; }
+    x[i] = s / a[i][i];
+  }
+  return x;
+}
+# Unknowns: member forces (tension +), then Rx and Ry at the pin L0, Ry at the roller L4.
+fn analyse(members) {
+  let m = members.len();
+  let n = 2 * JX.len();
+  let a = []; let b = [];
+  for (i in range(0, n)) { let row = []; for (k in range(0, m + 3)) { push(row, 0.0); } push(a, row); push(b, 0.0); }
+  for (k in range(0, m)) {
+    let i = members[k][0]; let j = members[k][1];
+    let dx = JX[j] - JX[i]; let dy = JY[j] - JY[i];
+    let len = sqrt(dx * dx + dy * dy);
+    a[2 * i][k] = dx / len; a[2 * i + 1][k] = dy / len;
+    a[2 * j][k] = -dx / len; a[2 * j + 1][k] = -dy / len;
+  }
+  a[0][m] = 1.0; a[1][m + 1] = 1.0; a[9][m + 2] = 1.0;
+  for (j in [1, 2, 3]) { b[2 * j + 1] = LOAD; }     # sum of forces + external load (-LOAD) = 0
+  return solve(a, b);
+}
+P = analyse(pratt);
+H = analyse(howe);
+println(sprintf("reactions: Rx = %.2f, R(L0) = %.2f kN, R(L4) = %.2f kN", P[13], P[14], P[15]));
+assert(abs(P[14] + P[15] - 3.0 * LOAD) < 0.000001, "reactions must carry the deck load");
+for (k in range(0, 13)) {
+  println(sprintf("%s-%s  Pratt %7.2f   %s-%s  Howe %7.2f kN", NAMES[pratt[k][0]], NAMES[pratt[k][1]], P[k], NAMES[howe[k][0]], NAMES[howe[k][1]], H[k]));
+}
+
+# Drawing data: 36 px per metre; Pratt deck at y = 300, Howe deck at y = 590.
+fn sx(x) { return 70.0 + x * 36.0; }
+fn segs(members, f, deck) {
+  let pts = []; let col = []; let wid = []; let lx = []; let ly = []; let lbl = [];
+  for (k in range(0, members.len())) {
+    let i = members[k][0]; let j = members[k][1];
+    let x1 = sx(JX[i]); let y1 = deck - JY[i] * 36.0; let x2 = sx(JX[j]); let y2 = deck - JY[j] * 36.0;
+    push(pts, str(x1) + " " + str(y1) + " " + str(x2) + " " + str(y2));
+    push(col, abs(f[k]) < 0.01 ? "#5b7690" : (f[k] > 0.0 ? "#7fa8d0" : "#f08a6c"));
+    push(wid, str(2.0 + abs(f[k]) / 8.0));
+    push(lx, str((x1 + x2) / 2.0));
+    # Labels sit just above horizontal members and beside the others.
+    push(ly, str((y1 + y2) / 2.0 + (y1 == y2 ? -8.0 : 4.0)));
+    push(lbl, (f[k] > 0.005 ? "+" : "") + sprintf("%.1f", abs(f[k]) < 0.005 ? 0.0 : f[k]));
+  }
+  return [pts, col, wid, lx, ly, lbl];
+}
+A = segs(pratt, P, 300.0);
+B = segs(howe, H, 590.0);
+react_txt = sprintf("%.0f kN", P[14]);
+
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 700, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Pratt vs Howe: same bridge, opposite diagonals", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Method of joints, 16 equations solved in lmscript. Member forces in kN; line width grows with force", "#9fb3c8");
+scene.text(40.0, 112.0, 16.0, "Pratt truss", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 402.0, 16.0, "Howe truss", "#e6edf3").set_attr("font-weight", "700");
+end _dsl_
+
+# One small drawing block per truss: members, labels, loads and supports.
+fn truss_block(D, deck) {
+  let lbl_bg = "#0f1720";
+  let q = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+let deck = float(${round(deck)});
+scene.polyline(${D[0][0]}, ${D[1][0]}, 1.0).set_attr("stroke-width", ${D[2][0]});
+scene.polyline(${D[0][1]}, ${D[1][1]}, 1.0).set_attr("stroke-width", ${D[2][1]});
+scene.polyline(${D[0][2]}, ${D[1][2]}, 1.0).set_attr("stroke-width", ${D[2][2]});
+scene.polyline(${D[0][3]}, ${D[1][3]}, 1.0).set_attr("stroke-width", ${D[2][3]});
+scene.polyline(${D[0][4]}, ${D[1][4]}, 1.0).set_attr("stroke-width", ${D[2][4]});
+scene.polyline(${D[0][5]}, ${D[1][5]}, 1.0).set_attr("stroke-width", ${D[2][5]});
+scene.polyline(${D[0][6]}, ${D[1][6]}, 1.0).set_attr("stroke-width", ${D[2][6]});
+scene.polyline(${D[0][7]}, ${D[1][7]}, 1.0).set_attr("stroke-width", ${D[2][7]});
+scene.polyline(${D[0][8]}, ${D[1][8]}, 1.0).set_attr("stroke-width", ${D[2][8]});
+scene.polyline(${D[0][9]}, ${D[1][9]}, 1.0).set_attr("stroke-width", ${D[2][9]});
+scene.polyline(${D[0][10]}, ${D[1][10]}, 1.0).set_attr("stroke-width", ${D[2][10]});
+scene.polyline(${D[0][11]}, ${D[1][11]}, 1.0).set_attr("stroke-width", ${D[2][11]});
+scene.polyline(${D[0][12]}, ${D[1][12]}, 1.0).set_attr("stroke-width", ${D[2][12]});
+for (k in range(0, 5)) { scene.circle(70.0 + 144.0 * float(k), deck, 5.0, "#e6edf3"); }
+for (k in range(1, 4)) {
+  scene.circle(70.0 + 144.0 * float(k), deck - 144.0, 5.0, "#e6edf3");
+  scene.arrow(70.0 + 144.0 * float(k), deck + 10.0, 70.0 + 144.0 * float(k), deck + 52.0, "#f5c16c", 2.5);
+  scene.text(70.0 + 144.0 * float(k) + 6.0, deck + 50.0, 12.0, "30 kN", "#f5c16c");
+}
+scene.path("M 70 " + str(deck + 5.0) + " L 58 " + str(deck + 25.0) + " L 82 " + str(deck + 25.0) + " Z", "#9fb3c8", "none", 1.0);
+scene.path("M 646 " + str(deck + 5.0) + " L 634 " + str(deck + 19.0) + " L 658 " + str(deck + 19.0) + " Z", "#9fb3c8", "none", 1.0);
+scene.circle(639.0, deck + 23.0, 4.0, "#9fb3c8");
+scene.circle(653.0, deck + 23.0, 4.0, "#9fb3c8");
+scene.text(70.0, deck + 44.0, 12.0, ${react_txt + " up"}, "#8fd694").set_attr("text-anchor", "middle");
+scene.text(646.0, deck + 44.0, 12.0, ${react_txt + " up"}, "#8fd694").set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.5, ${D[5][0]}, ${D[1][0]}).set_attr("x", ${D[3][0]}).set_attr("y", ${D[4][0]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.5, ${D[5][1]}, ${D[1][1]}).set_attr("x", ${D[3][1]}).set_attr("y", ${D[4][1]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.5, ${D[5][2]}, ${D[1][2]}).set_attr("x", ${D[3][2]}).set_attr("y", ${D[4][2]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.5, ${D[5][3]}, ${D[1][3]}).set_attr("x", ${D[3][3]}).set_attr("y", ${D[4][3]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.5, ${D[5][4]}, ${D[1][4]}).set_attr("x", ${D[3][4]}).set_attr("y", ${D[4][4]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.5, ${D[5][5]}, ${D[1][5]}).set_attr("x", ${D[3][5]}).set_attr("y", ${D[4][5]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.5, ${D[5][6]}, ${D[1][6]}).set_attr("x", ${D[3][6]}).set_attr("y", ${D[4][6]}).set_attr("text-anchor", "end").set_attr("transform", "translate(-8 0)");
+scene.text(0.0, 0.0, 12.5, ${D[5][7]}, ${D[1][7]}).set_attr("x", ${D[3][7]}).set_attr("y", ${D[4][7]}).set_attr("text-anchor", "start").set_attr("transform", "translate(8 0)");
+scene.text(0.0, 0.0, 12.5, ${D[5][8]}, ${D[1][8]}).set_attr("x", ${D[3][8]}).set_attr("y", ${D[4][8]}).set_attr("text-anchor", "start").set_attr("transform", "translate(8 0)");
+scene.text(0.0, 0.0, 12.5, ${D[5][9]}, ${D[1][9]}).set_attr("x", ${D[3][9]}).set_attr("y", ${D[4][9]}).set_attr("text-anchor", "start").set_attr("transform", "translate(8 -30)");
+scene.text(0.0, 0.0, 12.5, ${D[5][10]}, ${D[1][10]}).set_attr("x", ${D[3][10]}).set_attr("y", ${D[4][10]}).set_attr("text-anchor", "end").set_attr("transform", "translate(-8 0)");
+scene.text(0.0, 0.0, 12.5, ${D[5][11]}, ${D[1][11]}).set_attr("x", ${D[3][11]}).set_attr("y", ${D[4][11]}).set_attr("text-anchor", "start").set_attr("transform", "translate(10 0)");
+scene.text(0.0, 0.0, 12.5, ${D[5][12]}, ${D[1][12]}).set_attr("x", ${D[3][12]}).set_attr("y", ${D[4][12]}).set_attr("text-anchor", "end").set_attr("transform", "translate(-10 0)");
+end _dsl_
+  return q;
+}
+qa = truss_block(A, 300.0);
+qb = truss_block(B, 590.0);
+
+z = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+let panel = scene.rect(674.0, 104.0, 208.0, 300.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(690.0, 130.0, 14.0, "Reading the forces", "#e6edf3").set_attr("font-weight", "700");
+scene.line(690.0, 152.0, 716.0, 152.0, "#7fa8d0", 5.0);
+scene.text(724.0, 157.0, 12.5, "tension (+)", "#e6edf3");
+scene.line(690.0, 176.0, 716.0, 176.0, "#f08a6c", 5.0);
+scene.text(724.0, 181.0, 12.5, "compression (−)", "#e6edf3");
+scene.text(690.0, 210.0, 12.0, "In both designs the top chord is squeezed and the bottom chord stretched, like the top and bottom of a bent beam; the end posts carry the same 63.6 kN.", "#9fb3c8", 180.0);
+scene.text(690.0, 318.0, 12.0, "Flip the interior diagonals and they switch from tension (Pratt) to compression (Howe), and the chord forces shift between panels.", "#9fb3c8", 180.0);
+let wi = scene.rect(674.0, 424.0, 208.0, 210.0, "#1b1a26");
+wi.set_attr("stroke", "#4b3f6b");
+wi.set_attr("rx", "8");
+scene.text(690.0, 450.0, 14.0, "Why it matters", "#b49cf0").set_attr("font-weight", "700");
+scene.text(690.0, 472.0, 12.0, "Long members buckle when pushed. Pratt puts its long diagonals in tension, so slender steel works: the usual choice for steel bridges. Howe puts them in compression and the short verticals in tension, which suited timber diagonals with iron rods.", "#c9d6e2", 180.0);
+scene.render_png("build/rendered/truss-bridge.png", 900, 700, 1);
+end _dsl_
+
+savedsl(p, out);
+savedsl(qa, "build/truss-bridge-pratt.dslb");
+savedsl(qb, "build/truss-bridge-howe.dslb");
+savedsl(z, "build/truss-bridge-panel.dslb");
+r = system ${dsl_cli(p)} --dsl ${out} build/truss-bridge-pratt.dslb build/truss-bridge-howe.dslb build/truss-bridge-panel.dslb;
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/truss-bridge.png", "images/truss-bridge.png");
+println("wrote images/truss-bridge.png");

@@ -2,6 +2,10 @@
 # boxes, straight connectors with marker arrows, and a curved feedback
 # edge. Geometry comes from data lists with loops in lmscript; repeated
 # boxes are one path of rounded-rect subpaths.
+out = ARGV.len() > 0 ? ARGV[0] : "build/flow-pipeline.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
 xs = [60.0, 290.0, 520.0, 750.0];
 titles = ["Ingest", "Normalize", "Review", "Publish"];
 
@@ -24,8 +28,7 @@ for (i in range(0, xs.len())) {
     " A " + str(r) + " " + str(r) + " 0 0 1 " + str(x + r) + " " + str(y) + " Z ";
 }
 
-out = ARGV.len() > 0 ? ARGV[0] : "build/flow-pipeline.dslb";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(960, 420, "#101820");
 
 scene.path(${boxes_d}, "#1e3247", "#4a6a88", 2.0);
@@ -51,4 +54,8 @@ scene.text(60.0, 100.0, 15.0, "sequential stages, one feedback loop", "#9db4c8",
 scene.render_png("build/rendered/flow-pipeline.png", 960, 420, 1);
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/flow-pipeline.png", "images/flow-pipeline.png");
+println("wrote images/flow-pipeline.png");

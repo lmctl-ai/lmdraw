@@ -80,7 +80,7 @@ jobs:
       - name: install published lmscript compiler
         if: env.ONLY_OK == 'true'
         run: |
-          npm install --global @lmctl-ai/lmctl@0.2.359
+          npm install --global @lmctl-ai/lmctl@0.2.401
           scripts/select-compiler.sh | tee compiler.txt
       - name: verify SDK pin and test
         if: env.ONLY_OK == 'true'

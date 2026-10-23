@@ -1,5 +1,20 @@
-out = ARGV.len() > 0 ? ARGV[0] : "build/rendered/node-tour";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+# Node tour: retained nodes, nested groups, a linear gradient, path geometry,
+# an embedded PNG image, text measurement and a custom TrueType font.
+# lmdraw loads fonts only from assets/fonts/; when run outside the repository
+# (lmctl autorun) the Noto Sans file is fetched from the repository first.
+# Writes images/node-tour.png (640x360).
+out = ARGV.len() > 0 ? ARGV[0] : "build/node-tour.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+font = "assets/fonts/NotoSans-Regular.ttf";
+if (!file_exists(font)) {
+  mkdir("assets/fonts");
+  assert(which("curl") != null, "curl is needed to fetch " + font);
+  dl = system curl -sSfL -o ${font} https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/assets/fonts/NotoSans-Regular.ttf;
+  assert(dl.code == 0, "could not download " + font);
+}
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(640, 360, "#152438");
 scene.load_font("Noto Alternate", "assets/fonts/NotoSans-Regular.ttf", false);
 let gradient = scene.linear_gradient("panel-fill", 0.0, 0.0, 1.0, 1.0);
@@ -22,9 +37,13 @@ let mark = scene.path("M 100 275 L 125 250 L 150 275 Z", "#f5c16c", "none", 1.0)
 let measured = scene.measure_text("Retained scenes", 32.0, true);
 let title = scene.text(80.0, 130.0, 32.0, "Retained scenes", "#f5f8fb");
 title.set_attr("font-weight", "700");
-let subtitle = scene.text(80.0, 174.0, 18.0, "Nodes stay addressable between frames.", "#dce7f0");
+let subtitle = scene.text(80.0, 174.0, 16.0, "Nodes stay addressable between frames.", "#dce7f0");
 subtitle.set_attr("font-family", "Noto Alternate");
 scene.render_png("build/rendered/node-tour.png", 640, 360, 1);
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/node-tour.png", "images/node-tour.png");
+println("wrote images/node-tour.png");

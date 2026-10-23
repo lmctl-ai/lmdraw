@@ -2,6 +2,12 @@
 # (a rounded-square <-> circle morph by control-point lerp, and the growing
 # prefix of a pulse polyline); the DSL chunk just sets attributes and renders
 # one PNG per frame. Six morph frames, then fourteen draw-on frames.
+# Writes images/tween-morph.png (morph frame 3), images/tween-morph-drawon.png
+# (last draw-on frame) and, with ffmpeg, images/tween-morph.gif.
+out = ARGV.len() > 0 ? ARGV[0] : "build/tween-morph.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
 fn lerp(a, b, t) {
   return a + (b - a) * t;
 }
@@ -39,8 +45,7 @@ for (k in range(0, xs.len())) {
   all_pts = all_pts + (k == 0 ? "" : " ") + str(xs[k]) + " " + str(ys[k]);
 }
 
-out = ARGV.len() > 0 ? ARGV[0] : "build/tween-morph.dslb";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 
 # Part 1: morph. One path node, six frames.
 scene.canvas(800, 460, "#101820");
@@ -75,4 +80,16 @@ for (i in range(0, 14)) {
 }
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/morph-3.png", "images/tween-morph.png");
+copy_file("build/rendered/drawon-13.png", "images/tween-morph-drawon.png");
+println("wrote images/tween-morph.png and images/tween-morph-drawon.png");
+if (which("ffmpeg") != null) {
+  g = system ffmpeg -y -loglevel error -framerate 8 -i build/rendered/drawon-%d.png -vf "split[s0][s1];[s0]palettegen=max_colors=64[p];[s1][p]paletteuse=dither=none" -loop 0 images/tween-morph.gif;
+  assert(g.code == 0);
+  println("wrote images/tween-morph.gif");
+} else {
+  println("ffmpeg not found: skipped images/tween-morph.gif");
+}

@@ -2,6 +2,10 @@
 # rows, a vertical separator, one highlighted cell, and a small arrow path
 # overlay stepping across cells. Cell rectangles come from loops in
 # lmscript building path strings.
+out = ARGV.len() > 0 ? ARGV[0] : "build/table-metrics.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
 headers = ["metric", "q1", "q2", "q3", "q4"];
 rows = ["renders", "errors", "reviews", "merges"];
 data = [
@@ -42,8 +46,7 @@ for (r in range(0, 4)) {
     }
   }
 }
-out = ARGV.len() > 0 ? ARGV[0] : "build/table-metrics.dslb";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(960, 430, "#101820");
 
 scene.path(${zebra_a_d}, "#16222f", "#3a556e", 1.0);
@@ -87,7 +90,7 @@ hot.set_attr("stroke-width", "2");
 scene.text(698.0, 294.0, 14.0, "21", "#d8f3b0").set_attr("text-anchor", "end");
 
 for (c in range(0, 2)) {
-  let y = 200.0;
+  let y = 215.0;
   let x1 = 326.0 + 120.0 * float(c);
   let x2 = 440.0 + 120.0 * float(c);
   let arrow = scene.line(x1, y, x2, y, "#f5c16c", 1.8);
@@ -97,4 +100,8 @@ scene.text(242.0, 338.0, 15.0, "error count falling across quarters", "#9db4c8")
 scene.render_png("build/rendered/table-metrics.png", 960, 430, 1);
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/table-metrics.png", "images/table-metrics.png");
+println("wrote images/table-metrics.png");

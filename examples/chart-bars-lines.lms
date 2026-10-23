@@ -1,6 +1,10 @@
 # Bar chart and line chart from data arrays. Loops in lmscript build the
 # bar path, the polyline point list and the marker circles; the DSL chunk
 # just paints them. No chart library involved: geometry is explicit.
+out = ARGV.len() > 0 ? ARGV[0] : "build/chart-bars-lines.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
 bar_vals = [4.0, 8.0, 12.0, 6.0, 9.0, 14.0, 11.0, 7.0];
 line_vals = [3.0, 5.0, 4.0, 8.0, 7.0, 10.0, 9.0, 12.0];
 months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug"];
@@ -39,8 +43,7 @@ for (i in range(0, line_vals.len())) {
 grid_d = "M 70.0 100.0 L 560.0 100.0 M 70.0 200.0 L 560.0 200.0 " +
   "M 70.0 300.0 L 560.0 300.0 M 70.0 380.0 L 560.0 380.0 M 70.0 60.0 L 70.0 380.0 ";
 
-out = ARGV.len() > 0 ? ARGV[0] : "build/chart-bars-lines.dslb";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(800, 460, "#101820");
 
 scene.path(${grid_d}, "none", "#31465c", 1.0);
@@ -69,4 +72,8 @@ scene.text(70.0, 432.0, 12.0, "bars: merged, line: reviewed", "#9db4c8");
 scene.render_png("build/rendered/chart-bars-lines.png", 800, 460, 1);
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/chart-bars-lines.png", "images/chart-bars-lines.png");
+println("wrote images/chart-bars-lines.png");

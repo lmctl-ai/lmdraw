@@ -13,9 +13,9 @@ cmake --build build --parallel 3
 
 The binary reports its version with `lmdraw --version`; this value comes from the single `project(... VERSION ...)` declaration in CMakeLists.txt. Bump that version before creating the matching `vX.Y.Z` release tag. The release workflow checks the tag against the binary version.
 
-Compile an example with lmscript and run its bytecode with build/lmdraw --dsl FILE.dslb. The output directory must be build/rendered. The example test script creates it before rendering.
+Examples run themselves: `lmscript examples/NAME.lms build/NAME.dslb` compiles the block, then the script calls `system ${dsl_cli(p)} --dsl` and copies the PNG to images/NAME.png. test.sh puts the fresh build/ first on PATH so `cli="lmdraw"` binds to the local host (otherwise lmscript installs the latest release). See 07-examples-and-images.md.
 
-The test suite checks the SDK pin, embedded schema byte identity, compiler/registry signature parity, bytecode v5 compilation, six SVG fixture renders, a title card, a node API example, 24 tween frames, deterministic rerenders, multi-file prevalidation, output-path refusal, stale handles, normal umask permissions, and Linux static linkage. The C++ unit test checks deterministic raster bytes and a non-background foreground pixel.
+The test suite checks the README gallery (every autorun URL names an existing example, every docs/ image has PNG/GIF magic and fits 300 KB / 3 MB), the SDK pin, embedded schema byte identity, compiler/registry signature parity, bytecode v5 compilation, six SVG fixture renders, every example self-running into a valid images/NAME.png (GIFs when ffmpeg exists), a title card, a node API example, 24 tween frames, the images/ output root and its refusals, deterministic rerenders, multi-file prevalidation, output-path refusal, stale handles, normal umask permissions, and Linux static linkage. The C++ unit test checks deterministic raster bytes, a non-background foreground pixel, and the axes tick-label formatter (cpp/tick_format.hpp).
 
 For a sanitizer build:
 

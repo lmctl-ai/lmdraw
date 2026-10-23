@@ -1,0 +1,8 @@
+# images/ is the second PNG output root (created on demand), used by
+# self-running examples; output stays directly under it.
+p = _dsl_ schema="../schema/lmdraw.dsl.json";
+scene.canvas(64, 32, "#152438");
+scene.rect(8.0, 8.0, 48.0, 16.0, "#6fbdb4");
+scene.render_png("images/lmdraw-test-output.png", 64, 32, 1);
+end _dsl_
+savedsl(p, "build/images-output.dslb");

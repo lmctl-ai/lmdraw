@@ -1,6 +1,7 @@
 #include "dslvm.hpp"
 #include "resources.hpp"
 #include "renderer.hpp"
+#include "tick_format.hpp"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -122,29 +123,37 @@ fs::path safe_font_path(const std::string& raw) {
     throw dslvm::Error("font path must name a file directly under assets/fonts/ (max 8 MiB)");
   return full;
 }
+// PNG outputs go directly under one of two relative roots: build/rendered/
+// (the original contract) or images/ (what self-running examples write for
+// their users). Both roots are created on demand and may not be symbolic links.
 fs::path safe_png_path(const std::string& raw) {
   fs::path p(raw);
-  if (p.is_absolute() || p.has_root_name() || p.extension() != ".png" || raw.rfind("build/rendered/", 0) != 0)
-    throw dslvm::Error("PNG output must be a .png file under build/rendered/");
+  const bool to_images = raw.rfind("images/", 0) == 0;
+  if (p.is_absolute() || p.has_root_name() || p.extension() != ".png" ||
+      (!to_images && raw.rfind("build/rendered/", 0) != 0))
+    throw dslvm::Error("PNG output must be a .png file directly under build/rendered/ or images/");
   for (const auto& part : p)
     if (part == ".." || part == ".") throw dslvm::Error("PNG output traversal is refused");
   std::error_code ec;
-  const auto build_status = fs::symlink_status("build", ec);
-  if (ec || fs::is_symlink(build_status) || !fs::is_directory(build_status))
-    throw dslvm::Error("build/ must be a real output directory");
-  auto rendered_status = fs::symlink_status("build/rendered", ec);
+  const char* root_name = to_images ? "images" : "build/rendered";
+  if (!to_images) {
+    const auto build_status = fs::symlink_status("build", ec);
+    if (ec || fs::is_symlink(build_status) || !fs::is_directory(build_status))
+      throw dslvm::Error("build/ must be a real output directory");
+  }
+  auto rendered_status = fs::symlink_status(root_name, ec);
   if (!ec && rendered_status.type() == fs::file_type::not_found) {
-    fs::create_directory("build/rendered", ec);
-    if (ec) throw dslvm::Error("could not create build/rendered/");
-    rendered_status = fs::symlink_status("build/rendered", ec);
+    fs::create_directory(root_name, ec);
+    if (ec) throw dslvm::Error(std::string("could not create ") + root_name + "/");
+    rendered_status = fs::symlink_status(root_name, ec);
   }
   if (ec || fs::is_symlink(rendered_status) || !fs::is_directory(rendered_status))
-    throw dslvm::Error("build/rendered/ may not be a symbolic link");
-  auto root = fs::weakly_canonical("build/rendered");
+    throw dslvm::Error(std::string(root_name) + "/ must be a real directory, not a symbolic link");
+  auto root = fs::weakly_canonical(root_name);
   auto parent = fs::weakly_canonical(p.parent_path());
   auto full = fs::weakly_canonical(p);
   if (parent != root || full.parent_path() != root)
-    throw dslvm::Error("PNG output must remain directly under build/rendered/");
+    throw dslvm::Error(std::string("PNG output must remain directly under ") + root_name + "/");
   if (fs::is_symlink(fs::symlink_status(full, ec)))
     throw dslvm::Error("PNG output may not replace a symbolic link");
   return full;
@@ -169,7 +178,7 @@ class AtomicOutput {
       if (errno != EEXIST) break;
 #endif
     }
-    throw dslvm::Error("could not create a temporary output file under build/rendered/");
+    throw dslvm::Error("could not create a temporary PNG output file");
   }
   ~AtomicOutput() { if (!committed_) { std::error_code ec; fs::remove(temp_, ec); } }
   const fs::path& path() const { return temp_; }
@@ -483,12 +492,12 @@ std::string serialize_gradients(const Scene& scene) {
   return out + "</defs>";
 }
 std::string serialize_nodes(const Scene& scene, const std::map<MarkerKey, std::string>& markers) {
-  std::vector<const Node*> nested;
-  for (const auto& parent : scene.nodes)
-    for (const auto* child : parent->children) nested.push_back(child);
+  // Grouped nodes are emitted by their parent; a parent pointer is set exactly
+  // when a node is some group's child (Group.add and Scene.axes), so this
+  // linear check replaces a quadratic search over every group's children.
   std::string out;
   for (const auto& node : scene.nodes)
-    if (node->generation == scene.generation && std::find(nested.begin(), nested.end(), node.get()) == nested.end() && !node->from_svg)
+    if (node->generation == scene.generation && !node->parent && !node->from_svg)
       out += serialize(*node, markers);
   return out;
 }
@@ -654,6 +663,8 @@ void register_host(dslvm::Registry& r) {
       group->children.push_back(child);
     };
     const double x = a[0].f, y = a[1].f, w = a[2].f, h = a[3].f;
+    const int x_decimals = lmdraw::tick_decimals((a[5].f - a[4].f) / double(a[8].i));
+    const int y_decimals = lmdraw::tick_decimals((a[7].f - a[6].f) / double(a[8].i));
     add(add_node(*s, "line", {{"x1", num(x)}, {"y1", num(y + h)}, {"x2", num(x + w)}, {"y2", num(y + h)},
         {"stroke", a[9].s}, {"stroke-width", "1"}, {"stroke-linecap", "round"}}));
     add(add_node(*s, "line", {{"x1", num(x)}, {"y1", num(y)}, {"x2", num(x)}, {"y2", num(y + h)},
@@ -666,10 +677,10 @@ void register_host(dslvm::Registry& r) {
       add(add_node(*s, "line", {{"x1", num(x - 5)}, {"y1", num(py)}, {"x2", num(x)}, {"y2", num(py)},
           {"stroke", a[9].s}, {"stroke-width", "1"}}));
       auto* xlabel = add_node(*s, "text", {{"x", num(px)}, {"y", num(y + h + 20)}, {"font-family", "Noto Sans"},
-          {"font-size", "13"}, {"fill", a[9].s}, {"text-anchor", "middle"}}, num(a[4].f + t * (a[5].f - a[4].f)));
+          {"font-size", "13"}, {"fill", a[9].s}, {"text-anchor", "middle"}}, lmdraw::tick_label(a[4].f + t * (a[5].f - a[4].f), x_decimals));
       add(xlabel);
       auto* ylabel = add_node(*s, "text", {{"x", num(x - 9)}, {"y", num(py + 4)}, {"font-family", "Noto Sans"},
-          {"font-size", "13"}, {"fill", a[9].s}, {"text-anchor", "end"}}, num(a[6].f + t * (a[7].f - a[6].f)));
+          {"font-size", "13"}, {"fill", a[9].s}, {"text-anchor", "end"}}, lmdraw::tick_label(a[6].f + t * (a[7].f - a[6].f), y_decimals));
       add(ylabel);
     }
     return Value::object("Group", group);

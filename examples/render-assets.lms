@@ -1,5 +1,19 @@
-out = ARGV.len() > 0 ? ARGV[0] : "build/rendered/svg-assets";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+# Imported SVG: loads six static SVG drawings (the lmctl homepage automation
+# ladder and its level cards) into retained scenes and renders each to PNG.
+# lmdraw reads SVG only from assets/; outside the repository (lmctl autorun)
+# the files are fetched from the repository first.
+# Writes images/render-assets.png (960x360) and images/svg-*.png.
+out = ARGV.len() > 0 ? ARGV[0] : "build/render-assets.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+mkdir("assets");
+svgs = ["automation-ladder", "automation-ladder-mobile", "level-automation", "level-delegate", "level-sessions", "level-team"];
+for (name in svgs) {
+  let path = "assets/" + name + ".svg";
+  if (!file_exists(path)) { write_file(path, http_get("https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/" + path)); }
+}
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 let stage = scene.load_svg("assets/automation-ladder.svg", "level-one-stage");
 let stage_again = scene.load_svg("assets/automation-ladder.svg", "level-one-stage");
 stage.set_attr("opacity", "0.99");
@@ -17,4 +31,11 @@ scene.load_svg("assets/level-team.svg", "svg-team");
 scene.render_png("build/rendered/svg-level-team.png", 480, 300, 1);
 end _dsl_
 savedsl(p, out);
-println("wrote six SVG renders");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+for (name in svgs) {
+  copy_file("build/rendered/svg-" + name + ".png", "images/svg-" + name + ".png");
+}
+copy_file("build/rendered/svg-automation-ladder.png", "images/render-assets.png");
+println("wrote images/render-assets.png and six images/svg-*.png");

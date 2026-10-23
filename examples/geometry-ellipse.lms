@@ -3,7 +3,10 @@
 # all coordinates computed with plain arithmetic (no trig needed for the
 # chosen 45 and 60 degree points).
 out = ARGV.len() > 0 ? ARGV[0] : "build/geometry-ellipse.dslb";
-p = _dsl_ schema="../schema/lmdraw.dsl.json";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(800, 460, "#101820");
 
 # ---- left: circle, radius, tangent at 45 degrees ----
@@ -42,4 +45,8 @@ scene.text(40.0, 44.0, 20.0, "circle and ellipse facts", "#dbe7f3").set_attr("fo
 scene.render_png("build/rendered/geometry-ellipse.png", 800, 460, 1);
 end _dsl_
 savedsl(p, out);
-println(f"wrote {out}");
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/geometry-ellipse.png", "images/geometry-ellipse.png");
+println("wrote images/geometry-ellipse.png");
