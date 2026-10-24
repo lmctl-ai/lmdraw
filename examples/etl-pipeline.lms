@@ -1,9 +1,9 @@
-# ETL pipeline: two source datastores drawn as cylinders (rect + ellipse
-# caps), an Extract box, a labeled cluster box grouping three transform
-# nodes, a Load box and a warehouse cylinder. Extract->transform->load
-# edges are dashed, the warehouse sync edge is bidirectional
-# (marker-start + marker-end), every edge carries a label. Colors are
-# literals because script fns cannot capture chunk-level lets.
+# ETL pipeline: two source datastores drawn as cylinders, an Extract box,
+# a labeled cluster box grouping three transform nodes, a Load box and a
+# warehouse cylinder. Extract->transform->load edges are dashed, the
+# warehouse sync edge is bidirectional (marker-start + marker-end), every
+# edge carries a label. Shapes and connectors come from the host diagram
+# API; positions stay explicit.
 out = ARGV.len() > 0 ? ARGV[0] : "build/etl-pipeline.dslb";
 mkdir("images");
 mkdir("build");
@@ -14,88 +14,42 @@ scene.canvas(1000, 540, "#101820");
 scene.text(40.0, 44.0, 22.0, "ETL pipeline", "#dbe7f3").set_attr("font-weight", "700");
 scene.text(40.0, 68.0, 14.0, "extract -> transform -> load, with a verify back-channel", "#9db4c8");
 
-fn cylinder(cx: float, cy: float, w: float, h: float, label: string) -> void {
-  let body = scene.rect(cx - w / 2.0, cy - h / 2.0 + 10.0, w, h - 20.0, "#1e3247");
-  body.set_attr("stroke", "#6fbdb4");
-  body.set_attr("stroke-width", "2");
-  scene.ellipse(cx, cy - h / 2.0 + 10.0, w / 2.0, 10.0, "#1e3247")
-    .set_attr("stroke", "#6fbdb4").set_attr("stroke-width", "2");
-  scene.ellipse(cx, cy + h / 2.0 - 10.0, w / 2.0, 10.0, "#1e3247")
-    .set_attr("stroke", "#6fbdb4").set_attr("stroke-width", "2");
-  let t = scene.text(cx, cy + 5.0, 14.0, label, "#dbe7f3", w - 14.0);
-  t.set_attr("text-anchor", "middle");
-}
-
-fn box_with_text(x: float, y: float, w: float, h: float, title: string, stroke: string) -> void {
-  let r = scene.rect(x - w / 2.0, y - h / 2.0, w, h, "#1e3247");
-  r.set_attr("stroke", stroke);
-  r.set_attr("stroke-width", "2");
-  r.set_attr("rx", "8");
-  let t = scene.text(x, y + 5.0, 14.0, title, "#dbe7f3", w - 16.0);
-  t.set_attr("text-anchor", "middle");
-}
-
-fn dashed_edge(d: string, color: string, label: string, lx: float, ly: float) -> void {
-  let e = scene.path(d, "none", color, 2.5);
-  e.set_attr("marker-end", "arrow");
-  e.set_attr("stroke-dasharray", "7 5");
-  let t = scene.text(lx, ly, 13.0, label, color);
-  t.set_attr("text-anchor", "middle");
-}
-
 # sources
-cylinder(105.0, 190.0, 130.0, 96.0, "CRM db");
-cylinder(105.0, 380.0, 130.0, 96.0, "orders db");
+let crm = scene.cylinder(105.0, 190.0, 130.0, 96.0, "CRM db", "#1e3247", "#6fbdb4", 14.0);
+let orders = scene.cylinder(105.0, 380.0, 130.0, 96.0, "orders db", "#1e3247", "#6fbdb4", 14.0);
 
 # extract
-box_with_text(275.0, 285.0, 80.0, 64.0, "extract", "#f5c16c");
+let extract = scene.box(275.0, 285.0, 80.0, 64.0, "extract", "#1e3247", "#f5c16c", 8.0, 14.0);
 
 # source -> extract (solid fan-in)
-let s1 = scene.path("M 170.0 190.0 H 215.0 V 258.0 H 232.0", "none", "#f5c16c", 2.5);
-s1.set_attr("marker-end", "arrow");
-let s2 = scene.path("M 170.0 380.0 H 215.0 V 312.0 H 232.0", "none", "#f5c16c", 2.5);
-s2.set_attr("marker-end", "arrow");
-let s1t = scene.text(195.0, 178.0, 13.0, "pull", "#f5c16c");
-s1t.set_attr("text-anchor", "middle");
+scene.connector(crm, "e", extract, "w", "elbow", "none", "arrow", "none", "#f5c16c", 2.5, "pull", 0.35, 30.0, -14.0);
+scene.connector(orders, "e", extract, "w", "elbow", "none", "arrow", "none", "#f5c16c", 2.5, "", 0.5, 0.0, 0.0);
 
 # transform cluster box
-let cluster = scene.rect(385.0, 150.0, 290.0, 270.0, "#131c28");
-cluster.set_attr("stroke", "#6fbdb4");
-cluster.set_attr("stroke-width", "2");
-cluster.set_attr("rx", "12");
-let ct = scene.text(530.0, 178.0, 15.0, "transform cluster", "#6fbdb4");
-ct.set_attr("text-anchor", "middle");
-ct.set_attr("font-weight", "700");
+let cluster = scene.cluster(385.0, 150.0, 290.0, 270.0, "transform cluster", "#131c28", "#6fbdb4", 12.0, 15.0);
 
 # transform nodes inside the cluster
-box_with_text(460.0, 245.0, 110.0, 56.0, "clean", "#4a6a88");
-box_with_text(610.0, 245.0, 110.0, 56.0, "join", "#4a6a88");
-box_with_text(535.0, 355.0, 120.0, 56.0, "aggregate", "#4a6a88");
+let clean = scene.box(460.0, 245.0, 110.0, 56.0, "clean", "#1e3247", "#4a6a88", 8.0, 14.0);
+let join = scene.box(610.0, 245.0, 110.0, 56.0, "join", "#1e3247", "#4a6a88", 8.0, 14.0);
+let aggregate = scene.box(535.0, 355.0, 120.0, 56.0, "aggregate", "#1e3247", "#4a6a88", 8.0, 14.0);
 
 # inside-cluster edges (solid)
-let e1 = scene.line(515.0, 245.0, 555.0, 245.0, "#8fb4d9", 2.0);
-e1.set_attr("marker-end", "arrow");
-let e2 = scene.path("M 460.0 273.0 V 355.0 H 475.0", "none", "#8fb4d9", 2.0);
-e2.set_attr("marker-end", "arrow");
-let e3 = scene.path("M 610.0 273.0 V 355.0 H 595.0", "none", "#8fb4d9", 2.0);
-e3.set_attr("marker-end", "arrow");
+scene.connector(clean, "e", join, "w", "straight", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(clean, "s", aggregate, "w", "elbow", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(join, "s", aggregate, "e", "elbow", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
 
 # extract -> transform (dashed, labeled)
-dashed_edge("M 315.0 285.0 H 385.0", "#8fb4d9", "raw rows", 350.0, 272.0);
-
-# transform -> load (dashed, labeled)
-dashed_edge("M 675.0 285.0 H 745.0", "#8fb4d9", "clean rows", 710.0, 272.0);
+scene.connector(extract, "e", clean, "w", "elbow", "none", "arrow", "7 5", "#8fb4d9", 2.5, "raw rows", 0.5, 0.0, -12.0);
 
 # load
-box_with_text(785.0, 285.0, 80.0, 64.0, "load", "#f5c16c");
+let load = scene.box(785.0, 285.0, 80.0, 64.0, "load", "#1e3247", "#f5c16c", 8.0, 14.0);
+
+# transform -> load (dashed, labeled)
+scene.connector(join, "e", load, "w", "elbow", "none", "arrow", "7 5", "#8fb4d9", 2.5, "clean rows", 0.5, 0.0, -12.0);
 
 # warehouse with a bidirectional verify/sync edge
-cylinder(925.0, 285.0, 110.0, 96.0, "warehouse");
-let sync = scene.line(825.0, 285.0, 870.0, 285.0, "#f5c16c", 2.5);
-sync.set_attr("marker-start", "arrow");
-sync.set_attr("marker-end", "arrow");
-let st = scene.text(828.0, 240.0, 12.0, "load / verify", "#f5c16c");
-st.set_attr("text-anchor", "middle");
+let warehouse = scene.cylinder(925.0, 285.0, 110.0, 96.0, "warehouse", "#1e3247", "#6fbdb4", 14.0);
+scene.connector(load, "e", warehouse, "w", "straight", "arrow", "arrow", "none", "#f5c16c", 2.5, "load / verify", 0.5, -10.0, -42.0);
 
 scene.render_png("build/rendered/etl-pipeline.png", 1000, 540, 1);
 end _dsl_
