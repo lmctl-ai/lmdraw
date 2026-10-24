@@ -84,16 +84,18 @@ jobs:
           scripts/select-compiler.sh | tee compiler.txt
       - name: verify SDK pin and test
         if: env.ONLY_OK == 'true'
-        env:
-          LMDRAW_FULL_STATIC: ON
         run: ./test.sh
-      - name: audit static link
+      - name: audit runtime links
         if: env.ONLY_OK == 'true' && runner.os == 'Linux'
         run: |
           file build/lmdraw
-          ldd build/lmdraw > ldd.txt 2>&1 || true
-          cat ldd.txt
-          grep -q 'not a dynamic executable' ldd.txt
+          readelf -d build/lmdraw | grep NEEDED
+          readelf -d build/lmdraw | sed -n 's/.*NEEDED.*\[\(.*\)\]/\1/p' | while read -r lib; do
+            case "$lib" in
+              libc.so.6|libm.so.6|libpthread.so.0|libdl.so.2|librt.so.1|ld-linux*) ;;
+              *) echo "::error::unexpected dynamic dependency: $lib"; exit 1;;
+            esac
+          done
       - name: audit macOS runtime links
         if: env.ONLY_OK == 'true' && runner.os == 'macOS'
         run: |
