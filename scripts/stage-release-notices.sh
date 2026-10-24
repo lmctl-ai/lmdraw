@@ -5,7 +5,6 @@ dest="${1:?usage: scripts/stage-release-notices.sh DEST [BINARY] }"
 mkdir -p "$dest/licenses"
 cp "$root/LICENSE" "$root/THIRD_PARTY_NOTICES" "$dest/"
 cp "$root/licenses/"*.txt "$dest/licenses/"
-cp "$root/licenses/STATIC-RELINKING.md" "$dest/licenses/"
 if [[ -n "${2:-}" ]]; then
   bin="$2"
   name="$(basename "$bin")"

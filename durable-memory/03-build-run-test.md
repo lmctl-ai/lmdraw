@@ -23,4 +23,4 @@ For a sanitizer build:
 BUILD_DIR=build-sanitize ./test.sh
 ```
 
-The resulting sanitizer binary is dynamically linked to sanitizer runtimes; it is not the release artifact. Linux release binaries are fully static. macOS retains only system runtime libraries and is checked with otool. Windows uses MinGW-w64 static compiler runtimes and platform system DLLs.
+The resulting sanitizer binary is dynamically linked to sanitizer runtimes; it is not the release artifact. Linux release binaries are static except for the system glibc (>= 2.35), which is linked dynamically (Rule 14); test.sh enforces a NEEDED allowlist of libc/libm/libpthread/libdl/librt/ld-linux. macOS retains only system runtime libraries and is checked with otool. Windows uses MinGW-w64 static compiler runtimes and platform system DLLs.

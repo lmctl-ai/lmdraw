@@ -24,12 +24,10 @@ and licenses/Noto-OFL-1.1.txt.
 
 Linux C and C++ runtimes
 ------------------------
-Linux release binaries statically include glibc, libstdc++, and libgcc runtime
-objects. glibc is licensed under LGPL-2.1-or-later. GCC's libstdc++ and libgcc
-are GPL-3.0-or-later with GCC Runtime Library Exception 3.1. Copies of the
-relevant license texts are in licenses/. The project source, pinned rendering
-source, build files, and font data are shipped as the corresponding source
-bundle so users can rebuild and relink with a modified platform runtime.
+Linux release binaries link the system glibc dynamically (LGPL-2.1-or-later;
+glibc >= 2.35 required) and statically include libstdc++ and libgcc runtime
+objects, which are GPL-3.0-or-later with GCC Runtime Library Exception 3.1.
+Copies of the relevant license texts are in licenses/.
 
 Platform system libraries
 -------------------------

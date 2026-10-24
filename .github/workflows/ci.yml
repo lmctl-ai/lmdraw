@@ -33,8 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: ubuntu-24.04, name: linux-x64 }
-          - { os: ubuntu-24.04-arm, name: linux-arm64 }
+          - { os: ubuntu-22.04, name: linux-x64 }
+          - { os: ubuntu-22.04-arm, name: linux-arm64 }
           - { os: macos-15, name: macos-arm64 }
           - { os: macos-15-intel, name: macos-x64 }
           - { os: windows-2022, name: windows-x64 }
@@ -137,7 +137,7 @@ jobs:
           pattern: lmdraw-*
           path: dist
           merge-multiple: true
-      - name: stage licenses and source
+      - name: stage licenses
         run: |
           version="$(sed -nE 's/^project\(lmdraw VERSION ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' CMakeLists.txt)"
           [[ -n "$version" && "$GITHUB_REF_NAME" == "v$version" ]]
@@ -146,7 +146,6 @@ jobs:
           scripts/stage-release-notices.sh dist
           tar -czf dist/lmdraw-notices.tar.gz LICENSE THIRD_PARTY_NOTICES licenses
           rm -rf dist/licenses
-          git archive --format=tar.gz --prefix=lmdraw/ "$GITHUB_SHA" > dist/lmdraw-source.tar.gz
           (cd dist && sha256sum lmdraw-* LICENSE THIRD_PARTY_NOTICES > SHA256SUMS)
       - name: attach release assets
         env:

@@ -58,12 +58,12 @@ fi
 if command -v nice >/dev/null 2>&1; then nice -n 10 cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; else cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; fi
 ctest --test-dir "$BUILD_DIR" --output-on-failure || fail "C++ unit tests"
 ok "host and C++ raster unit test build"
-[[ "$("$HOST" --version)" == "lmdraw 0.2.4" ]] || fail "--version does not report the CMake project version"
+[[ "$("$HOST" --version)" == "lmdraw 0.2.5" ]] || fail "--version does not report the CMake project version"
 set +e
 "$HOST" --version extra >/dev/null 2>&1; code=$?
 set -e
 [[ $code == 2 ]] || fail "--version extra argument exit $code, expected 2"
-ok "--version prints lmdraw 0.2.4 and rejects extra arguments"
+ok "--version prints lmdraw 0.2.5 and rejects extra arguments"
 "$HOST" --schema --json > "$BUILD_DIR/embedded-schema.json"
 cmp schema/lmdraw.dsl.json "$BUILD_DIR/embedded-schema.json" || fail "embedded schema bytes differ"
 ok "--schema --json is byte-identical to schema/lmdraw.dsl.json"
@@ -298,9 +298,21 @@ if [[ $code != 3 ]] || ! grep -q 'outside the subset' "$BUILD_DIR/refused-svg.er
 ok "unsupported SVG presentation features refused"
 
 if [[ "$(uname -s)" == Linux* && "$BUILD_DIR" != *sanitize* ]]; then
-  ldd "$HOST" > "$BUILD_DIR/ldd.txt" 2>&1 || true
-  grep -q 'not a dynamic executable' "$BUILD_DIR/ldd.txt" || fail "Linux binary is dynamically linked"
-  ok "Linux binary is fully static"
+  if command -v readelf >/dev/null 2>&1; then
+    readelf -d "$HOST" | sed -n 's/.*NEEDED.*\[\(.*\)\]/\1/p' > "$BUILD_DIR/needed.txt"
+  else
+    ldd "$HOST" | sed -n 's/^[[:space:]]*\([^[:space:]]*\) =>.*/\1/p' > "$BUILD_DIR/needed.txt"
+  fi
+  bad=""
+  while IFS= read -r lib; do
+    case "$lib" in
+      libc.so.6|libm.so.6|libpthread.so.0|libdl.so.2|librt.so.1|ld-linux*) ;;
+      *) bad="$bad $lib";;
+    esac
+  done < "$BUILD_DIR/needed.txt"
+  [[ -z "$bad" ]] || fail "unexpected dynamic dependencies:$bad"
+  [[ -s "$BUILD_DIR/needed.txt" ]] || fail "no dynamic dependencies found; glibc must stay dynamic"
+  ok "Linux binary is dynamic only against the glibc runtime"
 elif [[ "$(uname -s)" == Darwin* ]]; then
   otool -L "$HOST" > "$BUILD_DIR/otool.txt"
   if grep -E '(@rpath|/opt/homebrew|/usr/local)' "$BUILD_DIR/otool.txt"; then fail "non-system dynamic dependency"; fi

@@ -95,7 +95,7 @@ The scene API: `canvas`, `rect`, `circle`, `ellipse`, `line`, `arrow`, `polyline
   <img src="docs/readme/architecture-light.png" alt="lmscript and the lmdraw schema feed the native host, which renders PNG output; SVG assets can be loaded into a scene" width="100%">
 </picture>
 
-lmdraw is a single static executable (LunaSVG/PlutoVG rasterizer, Noto Sans and Noto Sans Math compiled in). It verifies the bytecode against its embedded schema before running anything, keeps a retained scene of nodes, and writes PNGs atomically. The same binary renders the same bytes on every run.
+lmdraw is a single self-contained executable (LunaSVG/PlutoVG rasterizer, Noto Sans and Noto Sans Math compiled in); on Linux only the system glibc (>= 2.35, Ubuntu 22.04 or newer) is linked dynamically. It verifies the bytecode against its embedded schema before running anything, keeps a retained scene of nodes, and writes PNGs atomically. The same binary renders the same bytes on every run.
 
 ## Honest limits
 
@@ -123,6 +123,6 @@ More: [get started](https://lmctl.com/tools/lmdraw/get_started.html) · [tool gu
 
 ## License
 
-The lmdraw code is MIT licensed; see [LICENSE](LICENSE). Bundled components (LunaSVG and PlutoVG, MIT; Noto Sans, SIL OFL 1.1) and the runtime notices for the statically linked platform C/C++ libraries are listed in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) and [licenses/](licenses/).
+The lmdraw code is MIT licensed; see [LICENSE](LICENSE). Bundled components (LunaSVG and PlutoVG, MIT; Noto Sans, SIL OFL 1.1) and the runtime notices for the platform C/C++ libraries are listed in [THIRD_PARTY_NOTICES](THIRD_PARTY_NOTICES) and [licenses/](licenses/).
 
 Made by **Lattice Systems LLC**.
