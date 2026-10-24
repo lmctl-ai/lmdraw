@@ -1,0 +1,114 @@
+# Four small state machines on one canvas (2x2 panels): traffic light,
+# TCP connection, door lock and thermostat. States are rounded rects,
+# each panel has a filled initial-state dot with an arrow, and
+# transitions are labeled arrows (straight or curved). Colors are
+# literals because script fns cannot capture chunk-level lets.
+out = ARGV.len() > 0 ? ARGV[0] : "build/state-machines.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1100, 800, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "State machines", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "four small protocols, one notation", "#9db4c8");
+
+fn panel(x: float, y: float, w: float, h: float, title: string) -> void {
+  let r = scene.rect(x, y, w, h, "#131c28");
+  r.set_attr("stroke", "#2c4156");
+  r.set_attr("stroke-width", "2");
+  r.set_attr("rx", "12");
+  let t = scene.text(x + 22.0, y + 36.0, 16.0, title, "#dbe7f3");
+  t.set_attr("font-weight", "700");
+}
+
+fn state(x: float, y: float, w: float, h: float, label: string) -> void {
+  let r = scene.rect(x - w / 2.0, y - h / 2.0, w, h, "#1e3247");
+  r.set_attr("stroke", "#4a6a88");
+  r.set_attr("stroke-width", "2");
+  r.set_attr("rx", "10");
+  let t = scene.text(x, y + 5.0, 14.0, label, "#dbe7f3", w - 12.0);
+  t.set_attr("text-anchor", "middle");
+}
+
+fn trans(x1: float, y1: float, x2: float, y2: float, label: string, lx: float, ly: float) -> void {
+  let e = scene.line(x1, y1, x2, y2, "#f5c16c", 2.0);
+  e.set_attr("marker-end", "arrow");
+  let t = scene.text(lx, ly, 12.0, label, "#9db4c8");
+  t.set_attr("text-anchor", "middle");
+}
+
+fn trans_curve(d: string, label: string, lx: float, ly: float) -> void {
+  let e = scene.path(d, "none", "#f5c16c", 2.0);
+  e.set_attr("marker-end", "arrow");
+  let t = scene.text(lx, ly, 12.0, label, "#9db4c8");
+  t.set_attr("text-anchor", "middle");
+}
+
+fn initial_dot(x: float, y: float) -> void {
+  scene.circle(x, y, 6.0, "#f5c16c");
+}
+
+# --- panel 1: traffic light (top-left)
+panel(40.0, 90.0, 510.0, 350.0, "traffic light");
+initial_dot(80.0, 220.0);
+let t0 = scene.line(88.0, 220.0, 112.0, 220.0, "#f5c16c", 2.0);
+t0.set_attr("marker-end", "arrow");
+state(170.0, 220.0, 110.0, 48.0, "red");
+state(420.0, 220.0, 110.0, 48.0, "green");
+state(295.0, 360.0, 120.0, 48.0, "yellow");
+trans(225.0, 220.0, 365.0, 220.0, "after 30 s", 295.0, 205.0);
+trans(410.0, 244.0, 345.0, 338.0, "after 25 s", 415.0, 300.0);
+trans(245.0, 338.0, 180.0, 244.0, "after 5 s", 175.0, 300.0);
+
+# --- panel 2: TCP connection (top-right)
+panel(590.0, 90.0, 510.0, 350.0, "TCP connection");
+initial_dot(625.0, 350.0);
+let t1 = scene.line(633.0, 350.0, 650.0, 350.0, "#f5c16c", 2.0);
+t1.set_attr("marker-end", "arrow");
+state(720.0, 350.0, 130.0, 48.0, "CLOSED");
+state(720.0, 170.0, 130.0, 48.0, "SYN_SENT");
+state(945.0, 170.0, 130.0, 48.0, "ESTABLISHED");
+state(945.0, 350.0, 130.0, 48.0, "FIN_WAIT");
+trans(720.0, 326.0, 720.0, 194.0, "SYN", 698.0, 262.0);
+trans(785.0, 170.0, 878.0, 170.0, "SYN + ACK", 832.0, 155.0);
+trans(945.0, 194.0, 945.0, 326.0, "FIN", 968.0, 262.0);
+trans(878.0, 350.0, 785.0, 350.0, "ACK", 832.0, 372.0);
+
+# --- panel 3: door lock (bottom-left)
+panel(40.0, 440.0, 510.0, 350.0, "door lock");
+initial_dot(58.0, 600.0);
+let t2 = scene.line(66.0, 600.0, 84.0, 600.0, "#f5c16c", 2.0);
+t2.set_attr("marker-end", "arrow");
+state(165.0, 600.0, 150.0, 52.0, "LOCKED");
+state(425.0, 600.0, 160.0, 52.0, "UNLOCKED");
+trans_curve("M 240.0 582.0 C 290.0 530.0 350.0 530.0 350.0 582.0",
+  "unlock (code ok)", 295.0, 545.0);
+trans_curve("M 350.0 618.0 C 350.0 670.0 290.0 670.0 240.0 618.0",
+  "lock / 30 s timeout", 295.0, 690.0);
+
+# --- panel 4: thermostat (bottom-right)
+panel(590.0, 440.0, 510.0, 350.0, "thermostat");
+initial_dot(605.0, 600.0);
+let t3 = scene.line(613.0, 600.0, 630.0, 600.0, "#f5c16c", 2.0);
+t3.set_attr("marker-end", "arrow");
+state(700.0, 600.0, 130.0, 50.0, "IDLE");
+state(945.0, 510.0, 130.0, 50.0, "HEATING");
+state(945.0, 690.0, 130.0, 50.0, "COOLING");
+trans_curve("M 762.0 578.0 C 800.0 540.0 830.0 530.0 876.0 522.0",
+  "T < set - 1", 830.0, 545.0);
+trans_curve("M 876.0 545.0 C 830.0 585.0 800.0 600.0 762.0 620.0",
+  "T >= set", 820.0, 615.0);
+trans_curve("M 730.0 627.0 C 780.0 672.0 830.0 678.0 876.0 684.0",
+  "T > set + 1", 800.0, 700.0);
+trans_curve("M 876.0 698.0 C 820.0 655.0 760.0 645.0 728.0 628.0",
+  "T <= set", 795.0, 645.0);
+
+scene.render_png("build/rendered/state-machines.png", 1100, 800, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/state-machines.png", "images/state-machines.png");
+println("wrote images/state-machines.png");

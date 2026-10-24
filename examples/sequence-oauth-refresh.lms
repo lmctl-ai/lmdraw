@@ -1,0 +1,88 @@
+# OAuth refresh-token sequence diagram: three participants with header
+# boxes and dashed lifelines, solid request arrows and dashed response
+# arrows with numbered labels, a self-message loop on the gateway, and
+# activation bars on the gateway and auth-server lifelines. Colors are
+# literals because script fns cannot capture chunk-level lets.
+out = ARGV.len() > 0 ? ARGV[0] : "build/sequence-oauth-refresh.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1000, 620, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "OAuth refresh token flow", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "an expired access token, refreshed mid-request", "#9db4c8");
+
+fn participant(cx: float, name: string) -> void {
+  let r = scene.rect(cx - 80.0, 84.0, 160.0, 44.0, "#1e3247");
+  r.set_attr("stroke", "#4a6a88");
+  r.set_attr("stroke-width", "2");
+  r.set_attr("rx", "8");
+  let t = scene.text(cx, 111.0, 15.0, name, "#dbe7f3", 150.0);
+  t.set_attr("text-anchor", "middle");
+}
+
+fn lifeline(cx: float) -> void {
+  let l = scene.line(cx, 128.0, cx, 580.0, "#4a6a88", 1.5);
+  l.set_attr("stroke-dasharray", "5 6");
+}
+
+fn message(x1: float, x2: float, y: float, label: string, dashed: bool) -> void {
+  let m = scene.line(x1, y, x2, y, "#f5c16c", 2.0);
+  m.set_attr("marker-end", "arrow");
+  if (dashed) { m.set_attr("stroke-dasharray", "6 5"); }
+  let t = scene.text((x1 + x2) / 2.0, y - 7.0, 13.0, label, "#dbe7f3");
+  t.set_attr("text-anchor", "middle");
+}
+
+fn self_message(cx: float, y: float, label: string) -> void {
+  let m = scene.path("M " + str(cx) + " " + str(y) +
+    " H " + str(cx + 60.0) + " V " + str(y + 26.0) +
+    " H " + str(cx + 3.0), "none", "#f5c16c", 2.0);
+  m.set_attr("marker-end", "arrow");
+  let t = scene.text(cx + 70.0, y + 18.0, 13.0, label, "#dbe7f3");
+  t.set_attr("text-anchor", "start");
+}
+
+fn activation(cx: float, y1: float, y2: float) -> void {
+  let a = scene.rect(cx - 4.0, y1, 8.0, y2 - y1, "#3d5a76");
+  a.set_attr("stroke", "#8fb4d9");
+  a.set_attr("stroke-width", "1");
+}
+
+participant(180.0, "client");
+participant(500.0, "API gateway");
+participant(820.0, "auth server");
+lifeline(180.0);
+lifeline(500.0);
+lifeline(820.0);
+
+# activation bars (drawn before messages so arrows stay on top)
+activation(500.0, 140.0, 500.0);
+activation(820.0, 195.0, 440.0);
+
+message(188.0, 492.0, 160.0, "1  GET /orders (access token)", false);
+message(508.0, 812.0, 215.0, "2  introspect token", false);
+message(812.0, 508.0, 270.0, "3  401 token expired", true);
+self_message(504.0, 315.0, "4  rotate refresh token");
+message(508.0, 812.0, 375.0, "5  POST /oauth/refresh", false);
+message(812.0, 508.0, 430.0, "6  200 OK + new tokens", true);
+message(492.0, 188.0, 485.0, "7  200 OK (retry)", true);
+
+# legend
+let lg1 = scene.line(700.0, 48.0, 742.0, 48.0, "#f5c16c", 2.0);
+lg1.set_attr("marker-end", "arrow");
+scene.text(750.0, 52.0, 12.0, "request", "#9db4c8");
+let lg2 = scene.line(700.0, 70.0, 742.0, 70.0, "#f5c16c", 2.0);
+lg2.set_attr("marker-end", "arrow");
+lg2.set_attr("stroke-dasharray", "6 5");
+scene.text(750.0, 74.0, 12.0, "response", "#9db4c8");
+
+scene.render_png("build/rendered/sequence-oauth-refresh.png", 1000, 620, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/sequence-oauth-refresh.png", "images/sequence-oauth-refresh.png");
+println("wrote images/sequence-oauth-refresh.png");

@@ -1,0 +1,89 @@
+# Loan-approval decision tree: one root split, four internal decision
+# diamonds, six outcome leaves with a different fill for approvals,
+# rejections and neutral offers; every edge carries its branch label.
+# Colors are literals because script fns cannot capture chunk-level lets.
+out = ARGV.len() > 0 ? ARGV[0] : "build/decision-tree.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1100, 640, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "Loan approval decision tree", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "toy data: five splits, six outcomes", "#9db4c8");
+
+fn split_node(cx: float, cy: float, w: float, h: float, label: string) -> void {
+  let d = "M " + str(cx) + " " + str(cy - h / 2.0) +
+    " L " + str(cx + w / 2.0) + " " + str(cy) +
+    " L " + str(cx) + " " + str(cy + h / 2.0) +
+    " L " + str(cx - w / 2.0) + " " + str(cy) + " Z";
+  scene.path(d, "#1e3247", "#4a6a88", 2.0);
+  let t = scene.text(cx, cy + 4.0, 13.0, label, "#dbe7f3", w - 24.0);
+  t.set_attr("text-anchor", "middle");
+}
+
+fn leaf(x: float, y: float, label: string, kind: string) -> void {
+  let fill = "#1e3247";
+  let stroke = "#4a6a88";
+  if (kind == "approve") { fill = "#233d2e"; stroke = "#8fd694"; }
+  if (kind == "reject") { fill = "#3d2330"; stroke = "#d9897a"; }
+  let r = scene.rect(x - 65.0, y - 25.0, 130.0, 50.0, fill);
+  r.set_attr("stroke", stroke);
+  r.set_attr("stroke-width", "2");
+  r.set_attr("rx", "10");
+  let t = scene.text(x, y + 4.0, 13.0, label, "#dbe7f3", 120.0);
+  t.set_attr("text-anchor", "middle");
+}
+
+fn branch(x1: float, y1: float, x2: float, y2: float, label: string, lx: float, ly: float) -> void {
+  let e = scene.line(x1, y1, x2, y2, "#8fb4d9", 2.0);
+  e.set_attr("marker-end", "arrow");
+  let t = scene.text(lx, ly, 12.0, label, "#9db4c8");
+  t.set_attr("text-anchor", "middle");
+}
+
+# level 0
+split_node(550.0, 100.0, 170.0, 76.0, "age <= 30?");
+# level 1
+split_node(320.0, 240.0, 180.0, 76.0, "income <= 50k?");
+split_node(790.0, 240.0, 170.0, 76.0, "owns home?");
+# level 2
+split_node(360.0, 370.0, 150.0, 70.0, "student?");
+split_node(900.0, 370.0, 170.0, 70.0, "client > 5 yrs?");
+
+# root branches
+branch(465.0, 100.0, 320.0, 200.0, "yes", 375.0, 142.0);
+branch(635.0, 100.0, 790.0, 200.0, "no", 730.0, 142.0);
+
+# income <= 50k branches
+branch(230.0, 240.0, 120.0, 332.0, "yes", 155.0, 278.0);
+branch(410.0, 240.0, 360.0, 333.0, "no", 398.0, 282.0);
+
+# owns home branches
+branch(705.0, 240.0, 650.0, 332.0, "yes", 658.0, 278.0);
+branch(875.0, 240.0, 900.0, 333.0, "no", 908.0, 282.0);
+
+# student branches
+branch(330.0, 402.0, 270.0, 482.0, "yes", 283.0, 438.0);
+branch(390.0, 402.0, 430.0, 482.0, "no", 428.0, 438.0);
+
+# client > 5 yrs branches
+branch(870.0, 402.0, 820.0, 482.0, "yes", 832.0, 438.0);
+branch(930.0, 402.0, 990.0, 482.0, "no", 972.0, 438.0);
+
+# leaves
+leaf(120.0, 510.0, "Decline", "reject");
+leaf(270.0, 510.0, "Student card", "approve");
+leaf(430.0, 510.0, "Standard", "neutral");
+leaf(650.0, 510.0, "Prime rate", "approve");
+leaf(820.0, 510.0, "Gold card", "approve");
+leaf(990.0, 510.0, "Standard", "neutral");
+
+scene.render_png("build/rendered/decision-tree.png", 1100, 640, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/decision-tree.png", "images/decision-tree.png");
+println("wrote images/decision-tree.png");

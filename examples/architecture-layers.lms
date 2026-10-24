@@ -1,0 +1,99 @@
+# Layered architecture block diagram: four horizontal bands
+# (presentation / service / data / external) with component boxes, a
+# database cylinder in the data layer, elbow-routed connectors between
+# components across layers, and a note shape with a folded corner.
+# Colors are literals because script fns cannot capture chunk-level lets.
+out = ARGV.len() > 0 ? ARGV[0] : "build/architecture-layers.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1000, 720, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "Layered architecture", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "an order service and its neighbours, by layer", "#9db4c8");
+
+fn layer(y1: float, y2: float, label: string) -> void {
+  let r = scene.rect(180.0, y1, 780.0, y2 - y1, "#131c28");
+  r.set_attr("stroke", "#2c4156");
+  r.set_attr("stroke-width", "1.5");
+  r.set_attr("rx", "10");
+  let t = scene.text(196.0, y1 + 24.0, 13.0, label, "#6fbdb4");
+  t.set_attr("font-weight", "700");
+}
+
+fn box_with_text(x: float, y: float, w: float, h: float, title: string) -> void {
+  let r = scene.rect(x - w / 2.0, y - h / 2.0, w, h, "#1e3247");
+  r.set_attr("stroke", "#4a6a88");
+  r.set_attr("stroke-width", "2");
+  r.set_attr("rx", "8");
+  let t = scene.text(x, y + 5.0, 14.0, title, "#dbe7f3", w - 14.0);
+  t.set_attr("text-anchor", "middle");
+}
+
+fn cylinder(cx: float, cy: float, w: float, h: float, label: string) -> void {
+  let body = scene.rect(cx - w / 2.0, cy - h / 2.0 + 10.0, w, h - 20.0, "#1e3247");
+  body.set_attr("stroke", "#6fbdb4");
+  body.set_attr("stroke-width", "2");
+  scene.ellipse(cx, cy - h / 2.0 + 10.0, w / 2.0, 10.0, "#1e3247")
+    .set_attr("stroke", "#6fbdb4").set_attr("stroke-width", "2");
+  scene.ellipse(cx, cy + h / 2.0 - 10.0, w / 2.0, 10.0, "#1e3247")
+    .set_attr("stroke", "#6fbdb4").set_attr("stroke-width", "2");
+  let t = scene.text(cx, cy + 5.0, 14.0, label, "#dbe7f3", w - 14.0);
+  t.set_attr("text-anchor", "middle");
+}
+
+fn elbow(d: string) -> void {
+  let e = scene.path(d, "none", "#8fb4d9", 2.0);
+  e.set_attr("marker-end", "arrow");
+}
+
+layer(100.0, 215.0, "presentation");
+layer(235.0, 370.0, "service");
+layer(390.0, 525.0, "data");
+layer(545.0, 660.0, "external");
+
+# components
+box_with_text(320.0, 158.0, 140.0, 64.0, "web SPA");
+box_with_text(520.0, 158.0, 140.0, 64.0, "mobile app");
+box_with_text(280.0, 302.0, 130.0, 60.0, "API gateway");
+box_with_text(480.0, 302.0, 140.0, 60.0, "order service");
+box_with_text(680.0, 302.0, 140.0, 60.0, "billing service");
+cylinder(300.0, 458.0, 130.0, 96.0, "Postgres");
+box_with_text(500.0, 458.0, 120.0, 60.0, "Redis");
+box_with_text(700.0, 458.0, 140.0, 60.0, "event log");
+box_with_text(300.0, 602.0, 130.0, 60.0, "SendGrid");
+box_with_text(460.0, 602.0, 110.0, 60.0, "S3");
+box_with_text(700.0, 602.0, 130.0, 60.0, "Stripe");
+
+# connectors
+elbow("M 320.0 190.0 V 238.0 H 280.0 V 270.0");
+elbow("M 520.0 190.0 V 270.0");
+elbow("M 345.0 302.0 H 408.0");
+elbow("M 480.0 332.0 V 382.0 H 300.0 V 416.0");
+elbow("M 500.0 332.0 V 426.0");
+elbow("M 550.0 296.0 H 580.0 V 428.0 H 627.0");
+elbow("M 450.0 332.0 V 350.0 H 155.0 V 570.0 H 233.0");
+elbow("M 430.0 332.0 V 568.0");
+elbow("M 680.0 332.0 V 376.0 H 905.0 V 570.0 H 767.0");
+
+# folded-corner note in the service layer
+let note = scene.path("M 770.0 245.0 H 925.0 L 960.0 280.0 V 360.0 H 770.0 Z",
+  "#1b1a26", "#4b3f6b", 1.5);
+scene.path("M 925.0 245.0 V 280.0 H 960.0", "none", "#4b3f6b", 1.5);
+let n1 = scene.text(782.0, 305.0, 12.0, "deployed in 2 regions", "#c9bce0", 165.0);
+n1.set_attr("text-anchor", "start");
+let n2 = scene.text(782.0, 323.0, 12.0, "active/active failover", "#c9bce0", 165.0);
+n2.set_attr("text-anchor", "start");
+let n3 = scene.text(782.0, 288.0, 12.0, "note", "#9db4c8");
+n3.set_attr("text-anchor", "start");
+n3.set_attr("font-weight", "700");
+
+scene.render_png("build/rendered/architecture-layers.png", 1000, 720, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/architecture-layers.png", "images/architecture-layers.png");
+println("wrote images/architecture-layers.png");

@@ -1,0 +1,93 @@
+# Org chart on an explicit grid: CEO on row 0, two VPs on row 1,
+# three reports per VP on row 2. Column placement goes through a grid
+# helper; parent-child links are elbow connectors (vertical drop,
+# horizontal bus, arrowed vertical stubs); one dotted-line report runs
+# from Platform to the VP of Product. Colors are literals because
+# script fns cannot capture chunk-level lets.
+out = ARGV.len() > 0 ? ARGV[0] : "build/org-chart-grid.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _dsl_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1000, 640, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "Org chart", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "grid-placed boxes, elbow tree connectors, one dotted line", "#9db4c8");
+
+# grid: report columns are 130 px apart starting at x=105
+fn col_x(i: float) -> float {
+  return 105.0 + i * 130.0;
+}
+
+fn org_box(x: float, y: float, w: float, role: string, name: string, accent: string) -> void {
+  let r = scene.rect(x - w / 2.0, y - 29.0, w, 58.0, "#1e3247");
+  r.set_attr("stroke", accent);
+  r.set_attr("stroke-width", "2");
+  r.set_attr("rx", "8");
+  let a = scene.text(x, y - 3.0, 14.0, role, "#dbe7f3", w - 14.0);
+  a.set_attr("text-anchor", "middle");
+  a.set_attr("font-weight", "700");
+  let b = scene.text(x, y + 16.0, 12.0, name, "#9db4c8", w - 14.0);
+  b.set_attr("text-anchor", "middle");
+}
+
+# vertical drop + horizontal bus (no markers)
+fn bus(px: float, py_bottom: float, by: float, x_first: float, x_last: float) -> void {
+  scene.path("M " + str(px) + " " + str(py_bottom) + " V " + str(by), "none", "#4a6a88", 2.0);
+  scene.path("M " + str(x_first) + " " + str(by) + " H " + str(x_last), "none", "#4a6a88", 2.0);
+}
+
+# arrowed stub from the bus down into a child box
+fn stub(x: float, by: float, child_top: float, dashed: bool) -> void {
+  let s = scene.path("M " + str(x) + " " + str(by) + " V " + str(child_top - 2.0), "none", "#4a6a88", 2.0);
+  s.set_attr("marker-end", "arrow");
+  if (dashed) { s.set_attr("stroke-dasharray", "5 5"); }
+}
+
+fn elbow_dashed(d: string) -> void {
+  let e = scene.path(d, "none", "#8fb4d9", 1.8);
+  e.set_attr("marker-end", "arrow");
+  e.set_attr("stroke-dasharray", "5 5");
+}
+
+# row 0: CEO
+org_box(500.0, 110.0, 220.0, "Chief Executive", "A. Rivera", "#f5c16c");
+# row 1: VPs
+org_box(250.0, 250.0, 180.0, "VP Engineering", "J. Chen", "#6fbdb4");
+org_box(750.0, 250.0, 180.0, "VP Product", "L. Gomez", "#6fbdb4");
+# row 2: reports
+org_box(col_x(0.0), 430.0, 160.0, "Backend", "M. Okafor", "#4a6a88");
+org_box(col_x(1.0), 430.0, 160.0, "Platform", "S. Patel", "#4a6a88");
+org_box(col_x(2.0), 430.0, 160.0, "QA", "R. Novak", "#4a6a88");
+org_box(col_x(4.0), 430.0, 160.0, "Design", "T. Ali", "#4a6a88");
+org_box(col_x(5.0), 430.0, 160.0, "Growth", "K. Singh", "#4a6a88");
+org_box(col_x(6.0), 430.0, 160.0, "Data", "D. Ford", "#4a6a88");
+
+# CEO -> VPs
+bus(500.0, 139.0, 185.0, 250.0, 750.0);
+stub(250.0, 185.0, 221.0, false);
+stub(750.0, 185.0, 221.0, false);
+
+# VP Engineering -> its three reports
+bus(250.0, 279.0, 330.0, col_x(0.0), col_x(2.0));
+stub(col_x(0.0), 330.0, 401.0, false);
+stub(col_x(1.0), 330.0, 401.0, false);
+stub(col_x(2.0), 330.0, 401.0, false);
+
+# VP Product -> its three reports
+bus(750.0, 279.0, 330.0, col_x(4.0), col_x(6.0));
+stub(col_x(4.0), 330.0, 401.0, false);
+stub(col_x(5.0), 330.0, 401.0, false);
+stub(col_x(6.0), 330.0, 401.0, false);
+
+# dotted-line report: Platform also reports to VP Product
+elbow_dashed("M " + str(col_x(2.0) + 80.0) + " 430.0 H 560.0 V 250.0 H 654.0");
+
+scene.render_png("build/rendered/org-chart-grid.png", 1000, 640, 1);
+end _dsl_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/org-chart-grid.png", "images/org-chart-grid.png");
+println("wrote images/org-chart-grid.png");
