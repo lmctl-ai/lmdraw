@@ -2,7 +2,7 @@ Third-party components included in lmdraw distributions
 
 Project code
 ------------
-The lmdraw source and the vendored cpp-dsl-sdk header are licensed under MIT;
+The lmdraw source and the vendored lmcode-cpp header are licensed under MIT;
 see LICENSE.
 
 LunaSVG 3.5.0 and PlutoVG 1.3.1
