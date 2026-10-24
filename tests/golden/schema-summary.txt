@@ -4,6 +4,9 @@ context scene: Scene
 Gradient
 Gradient.stop(float, string) -> Gradient
 
+Grid
+Grid.cell(int, int) -> Shape
+
 Group
 Group.add(Group) -> Group
 Group.add(Node) -> Group
@@ -13,15 +16,27 @@ Node
 Node.set_attr(string, string) -> Node
 
 Scene
+Scene.activation(float, float, float, string, string) -> Group
 Scene.arrow(float, float, float, float, string, float) -> Node
 Scene.axes(float, float, float, float, float, float, float, float, int, string) -> Group
+Scene.box(Shape, string, float, float, string, string, string, float, float) -> Shape
+Scene.box(float, float, float, float, string, string, string, float, float) -> Shape
 Scene.canvas(int, int, string) -> Scene
 Scene.circle(float, float, float, string) -> Node
+Scene.cluster(float, float, float, float, string, string, string, float, float) -> Shape
+Scene.connector(Shape, string, Shape, string, string, string, string, string, string, float, string, float, float, float) -> Group
+Scene.connector(Shape, string, float, float, string, string, string, string, string, float, string, float, float, float) -> Group
+Scene.connector(float, float, Shape, string, string, string, string, string, string, float, string, float, float, float) -> Group
+Scene.connector(float, float, float, float, string, string, string, string, string, float, string, float, float, float) -> Group
+Scene.cylinder(float, float, float, float, string, string, string, float) -> Shape
+Scene.diamond(float, float, float, float, string, string, string, float) -> Shape
 Scene.ellipse(float, float, float, float, string) -> Node
+Scene.grid(float, float, float, float, int, int, float, float) -> Grid
 Scene.group() -> Group
 Scene.image(string, float, float, float, float) -> Node
 Scene.legend(float, float, string, string, string) -> Group
 Scene.legend(float, float, string, string, string, string) -> Group
+Scene.lifeline(float, float, float, string) -> Group
 Scene.line(float, float, float, float, string, float) -> Node
 Scene.linear_gradient(string, float, float, float, float) -> Gradient
 Scene.load_font(string, string, bool) -> void
@@ -29,9 +44,17 @@ Scene.load_svg(string, string) -> Node
 Scene.log_axes(float, float, float, float, float, float, float, float, bool, bool, int, string) -> Group
 Scene.log_axes(float, float, float, float, float, float, float, float, int, string) -> Group
 Scene.measure_text(string, float, bool) -> float
+Scene.message(float, float, float, float, string, bool, string) -> Group
+Scene.note(float, float, float, float, string, string, string, float) -> Shape
 Scene.path(string, string, string, float) -> Node
 Scene.polyline(string, string, float) -> Node
 Scene.rect(float, float, float, float, string) -> Node
 Scene.render_png(string, int, int, int) -> void
+Scene.self_message(float, float, string, string) -> Group
 Scene.text(float, float, float, string, string) -> Node
 Scene.text(float, float, float, string, string, float) -> Node
+
+Shape
+Shape.cx() -> float
+Shape.cy() -> float
+Shape.set_attr(string, string) -> Shape

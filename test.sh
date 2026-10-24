@@ -58,12 +58,12 @@ fi
 if command -v nice >/dev/null 2>&1; then nice -n 10 cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; else cmake --build "$BUILD_DIR" --parallel 3 || fail "build"; fi
 ctest --test-dir "$BUILD_DIR" --output-on-failure || fail "C++ unit tests"
 ok "host and C++ raster unit test build"
-[[ "$("$HOST" --version)" == "lmdraw 0.2.5" ]] || fail "--version does not report the CMake project version"
+[[ "$("$HOST" --version)" == "lmdraw 0.2.6" ]] || fail "--version does not report the CMake project version"
 set +e
 "$HOST" --version extra >/dev/null 2>&1; code=$?
 set -e
 [[ $code == 2 ]] || fail "--version extra argument exit $code, expected 2"
-ok "--version prints lmdraw 0.2.5 and rejects extra arguments"
+ok "--version prints lmdraw 0.2.6 and rejects extra arguments"
 "$HOST" --schema --json > "$BUILD_DIR/embedded-schema.json"
 cmp schema/lmdraw.dsl.json "$BUILD_DIR/embedded-schema.json" || fail "embedded schema bytes differ"
 ok "--schema --json is byte-identical to schema/lmdraw.dsl.json"
@@ -203,6 +203,18 @@ set -e
 [[ $code == 3 ]] || fail "invalid axes refusal exit $code, expected 3"
 grep -q 'axes ranges must be increasing' "$BUILD_DIR/invalid-axes.err" || fail "axes range diagnostic"
 ok "invalid axes ranges are refused before node creation"
+for fixture in invalid-connector-routing invalid-anchor invalid-grid invalid-connector-label-t; do
+  "$LMSCRIPT" "tests/refusals/$fixture.lms" "$BUILD_DIR/$fixture.dslb" >/dev/null || fail "$fixture fixture compile"
+  set +e
+  "$HOST" --dsl "$BUILD_DIR/$fixture.dslb" >/dev/null 2> "$BUILD_DIR/$fixture.err"; code=$?
+  set -e
+  [[ $code == 3 ]] || fail "$fixture refusal exit $code, expected 3"
+done
+grep -q 'connector routing must be straight, elbow, or curve' "$BUILD_DIR/invalid-connector-routing.err" || fail "connector routing diagnostic"
+grep -q 'connector start anchor must be one of n, s, e, w, ne, nw, se, sw, c' "$BUILD_DIR/invalid-anchor.err" || fail "connector anchor diagnostic"
+grep -q 'grid rows and columns must be from 1 to 64' "$BUILD_DIR/invalid-grid.err" || fail "grid size diagnostic"
+grep -q 'connector label position must be from 0 to 1' "$BUILD_DIR/invalid-connector-label-t.err" || fail "connector label position diagnostic"
+ok "invalid connector routings, anchors, grid sizes, and label positions are refused"
 for fixture in invalid-log-axes invalid-legend; do
   "$LMSCRIPT" "tests/refusals/$fixture.lms" "$BUILD_DIR/$fixture.dslb" >/dev/null || fail "$fixture fixture compile"
   set +e

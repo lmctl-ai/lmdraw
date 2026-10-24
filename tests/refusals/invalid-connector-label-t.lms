@@ -1,0 +1,5 @@
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(64, 64, "#152438");
+scene.connector(8.0, 8.0, 56.0, 56.0, "straight", "none", "arrow", "none", "#f5c16c", 2.0, "hop", 1.5, 0.0, 0.0);
+end _dsl_
+savedsl(p, "build/invalid-connector-label-t.dslb");

@@ -1,0 +1,7 @@
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(120, 80, "#152438");
+let a = scene.box(30.0, 30.0, 40.0, 20.0, "", "#1e3247", "#4a6a88", 4.0, 12.0);
+let b = scene.box(90.0, 50.0, 40.0, 20.0, "", "#1e3247", "#4a6a88", 4.0, 12.0);
+scene.connector(a, "q", b, "w", "straight", "none", "arrow", "none", "#f5c16c", 2.0, "", 0.5, 0.0, 0.0);
+end _dsl_
+savedsl(p, "build/invalid-anchor.dslb");

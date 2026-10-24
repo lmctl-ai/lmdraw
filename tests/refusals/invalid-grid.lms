@@ -1,0 +1,5 @@
+p = _dsl_ schema="../../schema/lmdraw.dsl.json";
+scene.canvas(64, 64, "#152438");
+scene.grid(4.0, 4.0, 56.0, 56.0, 0, 4, 2.0, 2.0);
+end _dsl_
+savedsl(p, "build/invalid-grid.dslb");

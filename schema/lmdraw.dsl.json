@@ -177,6 +177,238 @@
             "returns": "Group"
           }
         ],
+        "box": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "float",
+              "float"
+            ],
+            "returns": "Shape"
+          },
+          {
+            "params": [
+              "Shape",
+              "string",
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "float",
+              "float"
+            ],
+            "returns": "Shape"
+          }
+        ],
+        "diamond": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "float"
+            ],
+            "returns": "Shape"
+          }
+        ],
+        "cylinder": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "float"
+            ],
+            "returns": "Shape"
+          }
+        ],
+        "note": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "float"
+            ],
+            "returns": "Shape"
+          }
+        ],
+        "cluster": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "float",
+              "float"
+            ],
+            "returns": "Shape"
+          }
+        ],
+        "connector": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "string",
+              "string",
+              "float",
+              "string",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Group"
+          },
+          {
+            "params": [
+              "Shape",
+              "string",
+              "Shape",
+              "string",
+              "string",
+              "string",
+              "string",
+              "string",
+              "string",
+              "float",
+              "string",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Group"
+          },
+          {
+            "params": [
+              "float",
+              "float",
+              "Shape",
+              "string",
+              "string",
+              "string",
+              "string",
+              "string",
+              "string",
+              "float",
+              "string",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Group"
+          },
+          {
+            "params": [
+              "Shape",
+              "string",
+              "float",
+              "float",
+              "string",
+              "string",
+              "string",
+              "string",
+              "string",
+              "float",
+              "string",
+              "float",
+              "float",
+              "float"
+            ],
+            "returns": "Group"
+          }
+        ],
+        "grid": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "int",
+              "int",
+              "float",
+              "float"
+            ],
+            "returns": "Grid"
+          }
+        ],
+        "lifeline": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "string"
+            ],
+            "returns": "Group"
+          }
+        ],
+        "message": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "float",
+              "string",
+              "bool",
+              "string"
+            ],
+            "returns": "Group"
+          }
+        ],
+        "activation": [
+          {
+            "params": [
+              "float",
+              "float",
+              "float",
+              "string",
+              "string"
+            ],
+            "returns": "Group"
+          }
+        ],
+        "self_message": [
+          {
+            "params": [
+              "float",
+              "float",
+              "string",
+              "string"
+            ],
+            "returns": "Group"
+          }
+        ],
         "image": [
           {
             "params": [
@@ -315,6 +547,44 @@
               "string"
             ],
             "returns": "Gradient"
+          }
+        ]
+      }
+    },
+    "Shape": {
+      "methods": {
+        "set_attr": [
+          {
+            "params": [
+              "string",
+              "string"
+            ],
+            "returns": "Shape"
+          }
+        ],
+        "cx": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ],
+        "cy": [
+          {
+            "params": [],
+            "returns": "float"
+          }
+        ]
+      }
+    },
+    "Grid": {
+      "methods": {
+        "cell": [
+          {
+            "params": [
+              "int",
+              "int"
+            ],
+            "returns": "Shape"
           }
         ]
       }

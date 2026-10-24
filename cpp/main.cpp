@@ -54,6 +54,10 @@ struct Scene {
   std::string definitions;
   struct GradientData { std::string id; float x1, y1, x2, y2; Scene* owner = nullptr; uint64_t generation = 0; std::vector<std::pair<float, std::string>> stops; };
   std::vector<std::unique_ptr<GradientData>> gradients;
+  struct ShapeData;
+  struct GridData;
+  std::vector<std::unique_ptr<ShapeData>> shapes;
+  std::vector<std::unique_ptr<GridData>> grids;
   uint64_t generation = 0;
 
   void require_canvas() const {
@@ -414,6 +418,403 @@ Node* add_node(Scene& s, const std::string& tag, std::map<std::string, std::stri
   Node* raw = node.get();
   s.nodes.push_back(std::move(node));
   return raw;
+}
+// Construct a node and adopt it into a group in one step; every grouped
+// helper below uses this so children serialize under their parent group.
+Node* attach(Scene& s, Node* group, const std::string& tag,
+             std::map<std::string, std::string> attrs, std::string text = {}) {
+  Node* child = add_node(s, tag, std::move(attrs), std::move(text));
+  child->parent = group;
+  group->children.push_back(child);
+  return child;
+}
+// A Shape is a labeled diagram node (rounded box, diamond, cylinder, note,
+// cluster, or grid cell) that remembers its bounding rect so connectors can
+// address named anchors on it. A Grid is a rows-by-cols array of invisible
+// cell shapes over an author-sized extent.
+struct Scene::ShapeData {
+  Scene* owner = nullptr;
+  uint64_t generation = 0;
+  Node* group = nullptr;
+  double x = 0, y = 0, w = 0, h = 0;
+};
+struct Scene::GridData {
+  Scene* owner = nullptr;
+  uint64_t generation = 0;
+  int rows = 0, cols = 0;
+  std::vector<ShapeData*> cells;
+};
+using ShapeData = Scene::ShapeData;
+using GridData = Scene::GridData;
+ShapeData* live_shape(void* p) {
+  auto* d = static_cast<ShapeData*>(p);
+  if (!d || !d->owner || d->generation != d->owner->generation)
+    throw dslvm::Error("shape handle is stale; create it after setting the canvas");
+  return d;
+}
+GridData* live_grid(void* p) {
+  auto* d = static_cast<GridData*>(p);
+  if (!d || !d->owner || d->generation != d->owner->generation)
+    throw dslvm::Error("grid handle is stale; create it after setting the canvas");
+  return d;
+}
+ShapeData* new_shape(Scene& s, Node* group, double x, double y, double w, double h) {
+  auto d = std::make_unique<ShapeData>();
+  d->owner = &s; d->generation = s.generation; d->group = group;
+  d->x = x; d->y = y; d->w = w; d->h = h;
+  auto* raw = d.get();
+  s.shapes.push_back(std::move(d));
+  return raw;
+}
+std::pair<double, double> anchor_point(const ShapeData& d, const std::string& anchor,
+                                       const std::string& label) {
+  const double cx = d.x + d.w / 2.0, cy = d.y + d.h / 2.0;
+  if (anchor == "n") return {cx, d.y};
+  if (anchor == "s") return {cx, d.y + d.h};
+  if (anchor == "e") return {d.x + d.w, cy};
+  if (anchor == "w") return {d.x, cy};
+  if (anchor == "c") return {cx, cy};
+  if (anchor == "ne") return {d.x + d.w, d.y};
+  if (anchor == "nw") return {d.x, d.y};
+  if (anchor == "se") return {d.x + d.w, d.y + d.h};
+  if (anchor == "sw") return {d.x, d.y + d.h};
+  throw dslvm::Error(label + " must be one of n, s, e, w, ne, nw, se, sw, c");
+}
+void shape_style(const std::string& fill, const std::string& stroke) {
+  validate_attr("fill", fill);
+  validate_attr("stroke", stroke);
+}
+// Centered wrapped label shared by the labeled shapes: the baseline sits a
+// third of the size below center, and a wrapped multi-line label shifts up
+// 0.6em so it stays visually centered.
+Node* centered_label(Scene& s, Node* group, double cx, double cy, double size,
+                     const std::string& label, double wrap) {
+  if (label.empty()) return nullptr;
+  if (label.size() > 4096) throw dslvm::Error("shape label exceeds 4096 bytes");
+  const std::string wrapped = wrap_text(label, wrap, float(size));
+  double baseline = cy + 0.35 * size;
+  if (wrapped.find('\n') != std::string::npos) baseline -= 0.6 * size;
+  return attach(s, group, "text", {{"x", num(cx)}, {"y", num(baseline)},
+      {"font-family", "Noto Sans"}, {"font-size", num(size)},
+      {"fill", "#dbe7f3"}, {"text-anchor", "middle"}}, wrapped);
+}
+ShapeData* build_box(Scene& s, double cx, double cy, double w, double h,
+                     const std::string& label, const std::string& fill, const std::string& stroke,
+                     double radius, double size) {
+  s.require_building();
+  finite(cx, "box center x"); finite(cy, "box center y");
+  positive(w, "box width"); positive(h, "box height");
+  finite(radius, "box corner radius");
+  if (radius < 0) throw dslvm::Error("box corner radius must be nonnegative");
+  positive(size, "box label size");
+  shape_style(fill, stroke);
+  const double x = cx - w / 2.0, y = cy - h / 2.0;
+  auto* group = add_node(s, "g", {});
+  std::map<std::string, std::string> attrs = {{"x", num(x)}, {"y", num(y)},
+      {"width", num(w)}, {"height", num(h)}, {"fill", fill}};
+  if (stroke != "none") { attrs["stroke"] = stroke; attrs["stroke-width"] = "2"; }
+  if (radius > 0) { attrs["rx"] = num(radius); attrs["ry"] = num(radius); }
+  attach(s, group, "rect", std::move(attrs));
+  centered_label(s, group, cx, cy, size, label, std::max(0.0, w - 16.0));
+  return new_shape(s, group, x, y, w, h);
+}
+ShapeData* build_diamond(Scene& s, double cx, double cy, double w, double h,
+                         const std::string& label, const std::string& fill,
+                         const std::string& stroke, double size) {
+  s.require_building();
+  finite(cx, "diamond center x"); finite(cy, "diamond center y");
+  positive(w, "diamond width"); positive(h, "diamond height");
+  positive(size, "diamond label size");
+  shape_style(fill, stroke);
+  const double x = cx - w / 2.0, y = cy - h / 2.0;
+  auto* group = add_node(s, "g", {});
+  std::map<std::string, std::string> attrs = {
+      {"d", "M " + num(cx) + " " + num(y) + " L " + num(x + w) + " " + num(cy) +
+            " L " + num(cx) + " " + num(y + h) + " L " + num(x) + " " + num(cy) + " Z"},
+      {"fill", fill}};
+  if (stroke != "none") { attrs["stroke"] = stroke; attrs["stroke-width"] = "2"; }
+  attach(s, group, "path", std::move(attrs));
+  centered_label(s, group, cx, cy, size, label, std::max(0.0, w - 24.0));
+  return new_shape(s, group, x, y, w, h);
+}
+ShapeData* build_cylinder(Scene& s, double cx, double cy, double w, double h,
+                          const std::string& label, const std::string& fill,
+                          const std::string& stroke, double size) {
+  s.require_building();
+  finite(cx, "cylinder center x"); finite(cy, "cylinder center y");
+  positive(w, "cylinder width"); finite(h, "cylinder height");
+  if (h <= 20.0) throw dslvm::Error("cylinder height must be greater than 20 pixels");
+  positive(size, "cylinder label size");
+  shape_style(fill, stroke);
+  const double x = cx - w / 2.0, y = cy - h / 2.0;
+  auto* group = add_node(s, "g", {});
+  auto cap = [&](double cap_cy) {
+    std::map<std::string, std::string> attrs = {{"cx", num(cx)}, {"cy", num(cap_cy)},
+        {"rx", num(w / 2.0)}, {"ry", "10"}, {"fill", fill}};
+    if (stroke != "none") { attrs["stroke"] = stroke; attrs["stroke-width"] = "2"; }
+    attach(s, group, "ellipse", std::move(attrs));
+  };
+  std::map<std::string, std::string> body = {{"x", num(x)}, {"y", num(y + 10.0)},
+      {"width", num(w)}, {"height", num(h - 20.0)}, {"fill", fill}};
+  if (stroke != "none") { body["stroke"] = stroke; body["stroke-width"] = "2"; }
+  attach(s, group, "rect", std::move(body));
+  cap(y + 10.0);
+  cap(y + h - 10.0);
+  centered_label(s, group, cx, cy, size, label, std::max(0.0, w - 16.0));
+  return new_shape(s, group, x, y, w, h);
+}
+ShapeData* build_note(Scene& s, double x, double y, double w, double h,
+                      const std::string& label, const std::string& fill,
+                      const std::string& stroke, double size) {
+  s.require_building();
+  finite(x, "note x"); finite(y, "note y");
+  positive(w, "note width"); positive(h, "note height");
+  positive(size, "note label size");
+  shape_style(fill, stroke);
+  const double fold = std::min(w, h) * 0.3;
+  auto* group = add_node(s, "g", {});
+  std::map<std::string, std::string> body = {
+      {"d", "M " + num(x) + " " + num(y) + " H " + num(x + w - fold) +
+            " L " + num(x + w) + " " + num(y + fold) + " V " + num(y + h) +
+            " H " + num(x) + " Z"},
+      {"fill", fill}};
+  std::map<std::string, std::string> crease = {
+      {"d", "M " + num(x + w - fold) + " " + num(y) + " V " + num(y + fold) +
+            " H " + num(x + w)},
+      {"fill", "none"}};
+  if (stroke != "none") {
+    body["stroke"] = stroke; body["stroke-width"] = "2";
+    crease["stroke"] = stroke; crease["stroke-width"] = "2";
+  }
+  attach(s, group, "path", std::move(body));
+  attach(s, group, "path", std::move(crease));
+  if (!label.empty()) {
+    if (label.size() > 4096) throw dslvm::Error("shape label exceeds 4096 bytes");
+    const std::string wrapped = wrap_text(label, std::max(0.0, w - 20.0), float(size));
+    attach(s, group, "text", {{"x", num(x + 10.0)}, {"y", num(y + 6.0 + size)},
+        {"font-family", "Noto Sans"}, {"font-size", num(size)},
+        {"fill", "#dbe7f3"}}, wrapped);
+  }
+  return new_shape(s, group, x, y, w, h);
+}
+ShapeData* build_cluster(Scene& s, double x, double y, double w, double h,
+                         const std::string& label, const std::string& fill,
+                         const std::string& stroke, double radius, double size) {
+  s.require_building();
+  finite(x, "cluster x"); finite(y, "cluster y");
+  positive(w, "cluster width"); positive(h, "cluster height");
+  finite(radius, "cluster corner radius");
+  if (radius < 0) throw dslvm::Error("cluster corner radius must be nonnegative");
+  positive(size, "cluster label size");
+  shape_style(fill, stroke);
+  auto* group = add_node(s, "g", {});
+  std::map<std::string, std::string> attrs = {{"x", num(x)}, {"y", num(y)},
+      {"width", num(w)}, {"height", num(h)}, {"fill", fill}};
+  if (stroke != "none") { attrs["stroke"] = stroke; attrs["stroke-width"] = "2"; }
+  if (radius > 0) { attrs["rx"] = num(radius); attrs["ry"] = num(radius); }
+  attach(s, group, "rect", std::move(attrs));
+  if (!label.empty()) {
+    if (label.size() > 4096) throw dslvm::Error("shape label exceeds 4096 bytes");
+    attach(s, group, "text", {{"x", num(x + w / 2.0)}, {"y", num(y + 13.0 + size)},
+        {"font-family", "Noto Sans"}, {"font-size", num(size)},
+        {"fill", stroke == "none" ? "#dbe7f3" : stroke}, {"text-anchor", "middle"},
+        {"font-weight", "700"}}, label);
+  }
+  return new_shape(s, group, x, y, w, h);
+}
+GridData* build_grid(Scene& s, double x, double y, double w, double h,
+                     int64_t rows, int64_t cols, double gap_x, double gap_y) {
+  s.require_building();
+  finite(x, "grid x"); finite(y, "grid y");
+  positive(w, "grid width"); positive(h, "grid height");
+  finite(gap_x, "grid gap"); finite(gap_y, "grid gap");
+  if (gap_x < 0 || gap_y < 0) throw dslvm::Error("grid gaps must be nonnegative");
+  if (rows < 1 || rows > 64 || cols < 1 || cols > 64)
+    throw dslvm::Error("grid rows and columns must be from 1 to 64");
+  const double cw = (w - double(cols - 1) * gap_x) / double(cols);
+  const double ch = (h - double(rows - 1) * gap_y) / double(rows);
+  if (!(cw > 0.0)) throw dslvm::Error("grid gaps must leave a positive cell width");
+  if (!(ch > 0.0)) throw dslvm::Error("grid gaps must leave a positive cell height");
+  if (s.nodes.size() > 10000 - size_t(2) * size_t(rows) * size_t(cols))
+    throw dslvm::Error("grid would exceed the scene node limit");
+  auto grid = std::make_unique<GridData>();
+  grid->owner = &s; grid->generation = s.generation;
+  grid->rows = int(rows); grid->cols = int(cols);
+  auto* raw = grid.get();
+  for (int64_t r = 0; r < rows; ++r) {
+    for (int64_t c = 0; c < cols; ++c) {
+      auto* group = add_node(s, "g", {});
+      const double cell_x = x + double(c) * (cw + gap_x);
+      const double cell_y = y + double(r) * (ch + gap_y);
+      attach(s, group, "rect", {{"x", num(cell_x)}, {"y", num(cell_y)},
+          {"width", num(cw)}, {"height", num(ch)}, {"fill", "none"}, {"stroke", "none"}});
+      grid->cells.push_back(new_shape(s, group, cell_x, cell_y, cw, ch));
+    }
+  }
+  s.grids.push_back(std::move(grid));
+  return raw;
+}
+struct ConnSpec {
+  double x1, y1, x2, y2;
+  std::string routing, start_marker, end_marker, dash, color;
+  double width;
+  std::string label;
+  double label_t, label_dx, label_dy;
+};
+std::pair<double, double> polyline_point(const std::vector<std::pair<double, double>>& pts,
+                                         double t) {
+  std::vector<double> lens(pts.size(), 0.0);
+  double total = 0.0;
+  for (size_t i = 1; i < pts.size(); ++i) {
+    total += std::hypot(pts[i].first - pts[i - 1].first, pts[i].second - pts[i - 1].second);
+    lens[i] = total;
+  }
+  if (total == 0.0) return pts.front();
+  const double target = t * total;
+  for (size_t i = 1; i < pts.size(); ++i) {
+    if (target <= lens[i] || i + 1 == pts.size()) {
+      const double seg = lens[i] - lens[i - 1];
+      const double u = seg > 0.0 ? (target - lens[i - 1]) / seg : 0.0;
+      return {pts[i - 1].first + u * (pts[i].first - pts[i - 1].first),
+              pts[i - 1].second + u * (pts[i].second - pts[i - 1].second)};
+    }
+  }
+  return pts.back();
+}
+Node* build_connector(Scene& s, const ConnSpec& c) {
+  s.require_building();
+  finite(c.x1, "connector x1"); finite(c.y1, "connector y1");
+  finite(c.x2, "connector x2"); finite(c.y2, "connector y2");
+  if (c.routing != "straight" && c.routing != "elbow" && c.routing != "curve")
+    throw dslvm::Error("connector routing must be straight, elbow, or curve");
+  validate_attr("marker-start", c.start_marker);
+  validate_attr("marker-end", c.end_marker);
+  validate_attr("stroke", c.color);
+  positive(c.width, "connector width");
+  if (!c.dash.empty() && c.dash != "none") validate_attr("stroke-dasharray", c.dash);
+  if (c.label.size() > 4096) throw dslvm::Error("connector label exceeds 4096 bytes");
+  finite(c.label_t, "connector label position");
+  if (c.label_t < 0.0 || c.label_t > 1.0)
+    throw dslvm::Error("connector label position must be from 0 to 1");
+  finite(c.label_dx, "connector label offset"); finite(c.label_dy, "connector label offset");
+  auto* group = add_node(s, "g", {});
+  std::map<std::string, std::string> style = {{"stroke", c.color},
+      {"stroke-width", num(c.width)}};
+  if (!c.dash.empty() && c.dash != "none") style["stroke-dasharray"] = c.dash;
+  std::pair<double, double> label_at{c.x1 + (c.x2 - c.x1) * c.label_t,
+                                     c.y1 + (c.y2 - c.y1) * c.label_t};
+  if (c.routing == "straight") {
+    std::map<std::string, std::string> attrs = {{"x1", num(c.x1)}, {"y1", num(c.y1)},
+        {"x2", num(c.x2)}, {"y2", num(c.y2)}, {"stroke-linecap", "round"}};
+    attrs.insert(style.begin(), style.end());
+    if (c.start_marker != "none") attrs["marker-start"] = c.start_marker;
+    if (c.end_marker != "none") attrs["marker-end"] = c.end_marker;
+    attach(s, group, "line", std::move(attrs));
+  } else if (c.routing == "elbow") {
+    std::vector<std::pair<double, double>> pts;
+    if (c.x1 == c.x2 || c.y1 == c.y2) {
+      pts = {{c.x1, c.y1}, {c.x2, c.y2}};
+    } else if (std::abs(c.x2 - c.x1) >= std::abs(c.y2 - c.y1)) {
+      const double mx = (c.x1 + c.x2) / 2.0;
+      pts = {{c.x1, c.y1}, {mx, c.y1}, {mx, c.y2}, {c.x2, c.y2}};
+    } else {
+      const double my = (c.y1 + c.y2) / 2.0;
+      pts = {{c.x1, c.y1}, {c.x1, my}, {c.x2, my}, {c.x2, c.y2}};
+    }
+    std::string d = "M " + num(pts[0].first) + " " + num(pts[0].second);
+    for (size_t i = 1; i < pts.size(); ++i)
+      d += " L " + num(pts[i].first) + " " + num(pts[i].second);
+    std::map<std::string, std::string> attrs = {{"d", d}, {"fill", "none"},
+        {"stroke-linecap", "round"}, {"stroke-linejoin", "round"}};
+    attrs.insert(style.begin(), style.end());
+    if (c.start_marker != "none") attrs["marker-start"] = c.start_marker;
+    if (c.end_marker != "none") attrs["marker-end"] = c.end_marker;
+    attach(s, group, "path", std::move(attrs));
+    label_at = polyline_point(pts, c.label_t);
+  } else {
+    double c1x, c1y, c2x, c2y;
+    if (std::abs(c.x2 - c.x1) >= std::abs(c.y2 - c.y1)) {
+      c1x = c.x1 + (c.x2 - c.x1) / 2.0; c1y = c.y1;
+      c2x = c.x2 - (c.x2 - c.x1) / 2.0; c2y = c.y2;
+    } else {
+      c1x = c.x1; c1y = c.y1 + (c.y2 - c.y1) / 2.0;
+      c2x = c.x2; c2y = c.y2 - (c.y2 - c.y1) / 2.0;
+    }
+    std::map<std::string, std::string> attrs = {
+        {"d", "M " + num(c.x1) + " " + num(c.y1) + " C " + num(c1x) + " " + num(c1y) +
+              " " + num(c2x) + " " + num(c2y) + " " + num(c.x2) + " " + num(c.y2)},
+        {"fill", "none"}, {"stroke-linecap", "round"}};
+    attrs.insert(style.begin(), style.end());
+    if (c.start_marker != "none") attrs["marker-start"] = c.start_marker;
+    if (c.end_marker != "none") attrs["marker-end"] = c.end_marker;
+    attach(s, group, "path", std::move(attrs));
+    const double t = c.label_t, u = 1.0 - t;
+    label_at = {u * u * u * c.x1 + 3.0 * u * u * t * c1x + 3.0 * u * t * t * c2x + t * t * t * c.x2,
+                u * u * u * c.y1 + 3.0 * u * u * t * c1y + 3.0 * u * t * t * c2y + t * t * t * c.y2};
+  }
+  if (!c.label.empty())
+    attach(s, group, "text", {{"x", num(label_at.first + c.label_dx)},
+        {"y", num(label_at.second + c.label_dy)}, {"font-family", "Noto Sans"},
+        {"font-size", "13"}, {"fill", c.color}, {"text-anchor", "middle"}}, c.label);
+  return group;
+}
+Node* build_lifeline(Scene& s, double x, double y0, double y1, const std::string& color) {
+  s.require_building();
+  finite(x, "lifeline x"); finite(y0, "lifeline start"); finite(y1, "lifeline end");
+  if (y1 <= y0) throw dslvm::Error("lifeline end must be below its start");
+  validate_attr("stroke", color);
+  auto* group = add_node(s, "g", {});
+  attach(s, group, "line", {{"x1", num(x)}, {"y1", num(y0)}, {"x2", num(x)}, {"y2", num(y1)},
+      {"stroke", color}, {"stroke-width", "1.5"}, {"stroke-dasharray", "5 6"}});
+  return group;
+}
+Node* build_message(Scene& s, double x1, double y1, double x2, double y2,
+                    const std::string& label, bool dashed, const std::string& color) {
+  s.require_building();
+  finite(x1, "message x1"); finite(y1, "message y1");
+  finite(x2, "message x2"); finite(y2, "message y2");
+  if (label.size() > 4096) throw dslvm::Error("message label exceeds 4096 bytes");
+  validate_attr("stroke", color);
+  auto* group = add_node(s, "g", {});
+  std::map<std::string, std::string> attrs = {{"x1", num(x1)}, {"y1", num(y1)},
+      {"x2", num(x2)}, {"y2", num(y2)}, {"stroke", color}, {"stroke-width", "2"},
+      {"stroke-linecap", "round"}, {"marker-end", "arrow"}};
+  if (dashed) attrs["stroke-dasharray"] = "6 5";
+  attach(s, group, "line", std::move(attrs));
+  if (!label.empty())
+    attach(s, group, "text", {{"x", num((x1 + x2) / 2.0)}, {"y", num((y1 + y2) / 2.0 - 7.0)},
+        {"font-family", "Noto Sans"}, {"font-size", "13"}, {"fill", "#dbe7f3"},
+        {"text-anchor", "middle"}}, label);
+  return group;
+}
+Node* build_activation(Scene& s, double x, double y0, double y1, const std::string& fill,
+                       const std::string& stroke) {
+  s.require_building();
+  finite(x, "activation x"); finite(y0, "activation start"); finite(y1, "activation end");
+  if (y1 <= y0) throw dslvm::Error("activation end must be below its start");
+  validate_attr("fill", fill);
+  validate_attr("stroke", stroke);
+  auto* group = add_node(s, "g", {});
+  std::map<std::string, std::string> attrs = {{"x", num(x - 4.0)}, {"y", num(y0)},
+      {"width", "8"}, {"height", num(y1 - y0)}, {"fill", fill}};
+  if (stroke != "none") { attrs["stroke"] = stroke; attrs["stroke-width"] = "1"; }
+  attach(s, group, "rect", std::move(attrs));
+  return group;
+}
+Node* build_self_message(Scene& s, double x, double y, const std::string& label,
+                         const std::string& color) {
+  s.require_building();
+  finite(x, "self message x"); finite(y, "self message y");
+  if (label.size() > 4096) throw dslvm::Error("message label exceeds 4096 bytes");
+  validate_attr("stroke", color);
+  auto* group = add_node(s, "g", {});
+  attach(s, group, "path", {{"d", "M " + num(x) + " " + num(y) + " H " + num(x + 60.0) +
+        " V " + num(y + 26.0) + " H " + num(x + 3.0)}, {"fill", "none"}, {"stroke", color},
+      {"stroke-width", "2"}, {"stroke-linejoin", "round"}, {"marker-end", "arrow"}});
+  if (!label.empty())
+    attach(s, group, "text", {{"x", num(x + 70.0)}, {"y", num(y + 18.0)},
+        {"font-family", "Noto Sans"}, {"font-size", "13"}, {"fill", "#dbe7f3"}}, label);
+  return group;
 }
 using MarkerKey = std::tuple<std::string, std::string, std::string>;
 MarkerKey marker_key(const Node& node, const std::string& kind) {
@@ -786,6 +1187,107 @@ void register_host(dslvm::Registry& r) {
     positive(a[3].f, "path stroke width");
     return Value::object("Node", add_node(*s, "path", {{"d", a[0].s}, {"fill", a[1].s},
         {"stroke", a[2].s}, {"stroke-width", num(a[3].f)}}));
+  });
+  r.method("Scene", "box", {"float", "float", "float", "float", "string", "string", "string", "float", "float"}, "Shape", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Shape", build_box(*s, a[0].f, a[1].f, a[2].f, a[3].f,
+        a[4].s, a[5].s, a[6].s, a[7].f, a[8].f));
+  });
+  r.method("Scene", "box", {"Shape", "string", "float", "float", "string", "string", "string", "float", "float"}, "Shape", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    const auto at = anchor_point(*live_shape(a[0].obj), a[1].s, "box anchor");
+    return Value::object("Shape", build_box(*s, at.first, at.second, a[2].f, a[3].f,
+        a[4].s, a[5].s, a[6].s, a[7].f, a[8].f));
+  });
+  r.method("Scene", "diamond", {"float", "float", "float", "float", "string", "string", "string", "float"}, "Shape", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Shape", build_diamond(*s, a[0].f, a[1].f, a[2].f, a[3].f,
+        a[4].s, a[5].s, a[6].s, a[7].f));
+  });
+  r.method("Scene", "cylinder", {"float", "float", "float", "float", "string", "string", "string", "float"}, "Shape", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Shape", build_cylinder(*s, a[0].f, a[1].f, a[2].f, a[3].f,
+        a[4].s, a[5].s, a[6].s, a[7].f));
+  });
+  r.method("Scene", "note", {"float", "float", "float", "float", "string", "string", "string", "float"}, "Shape", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Shape", build_note(*s, a[0].f, a[1].f, a[2].f, a[3].f,
+        a[4].s, a[5].s, a[6].s, a[7].f));
+  });
+  r.method("Scene", "cluster", {"float", "float", "float", "float", "string", "string", "string", "float", "float"}, "Shape", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Shape", build_cluster(*s, a[0].f, a[1].f, a[2].f, a[3].f,
+        a[4].s, a[5].s, a[6].s, a[7].f, a[8].f));
+  });
+  r.method("Scene", "connector", {"float", "float", "float", "float", "string", "string", "string", "string", "string", "float", "string", "float", "float", "float"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_connector(*s, ConnSpec{a[0].f, a[1].f, a[2].f, a[3].f,
+        a[4].s, a[5].s, a[6].s, a[7].s, a[8].s, a[9].f, a[10].s, a[11].f, a[12].f, a[13].f}));
+  });
+  r.method("Scene", "connector", {"Shape", "string", "Shape", "string", "string", "string", "string", "string", "string", "float", "string", "float", "float", "float"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    const auto from = anchor_point(*live_shape(a[0].obj), a[1].s, "connector start anchor");
+    const auto to = anchor_point(*live_shape(a[2].obj), a[3].s, "connector end anchor");
+    return Value::object("Group", build_connector(*s, ConnSpec{from.first, from.second,
+        to.first, to.second, a[4].s, a[5].s, a[6].s, a[7].s, a[8].s, a[9].f,
+        a[10].s, a[11].f, a[12].f, a[13].f}));
+  });
+  r.method("Scene", "connector", {"float", "float", "Shape", "string", "string", "string", "string", "string", "string", "float", "string", "float", "float", "float"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    const auto to = anchor_point(*live_shape(a[2].obj), a[3].s, "connector end anchor");
+    return Value::object("Group", build_connector(*s, ConnSpec{a[0].f, a[1].f,
+        to.first, to.second, a[4].s, a[5].s, a[6].s, a[7].s, a[8].s, a[9].f,
+        a[10].s, a[11].f, a[12].f, a[13].f}));
+  });
+  r.method("Scene", "connector", {"Shape", "string", "float", "float", "string", "string", "string", "string", "string", "float", "string", "float", "float", "float"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    const auto from = anchor_point(*live_shape(a[0].obj), a[1].s, "connector start anchor");
+    return Value::object("Group", build_connector(*s, ConnSpec{from.first, from.second,
+        a[2].f, a[3].f, a[4].s, a[5].s, a[6].s, a[7].s, a[8].s, a[9].f,
+        a[10].s, a[11].f, a[12].f, a[13].f}));
+  });
+  r.method("Scene", "grid", {"float", "float", "float", "float", "int", "int", "float", "float"}, "Grid", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Grid", build_grid(*s, a[0].f, a[1].f, a[2].f, a[3].f,
+        a[4].i, a[5].i, a[6].f, a[7].f));
+  });
+  r.method("Scene", "lifeline", {"float", "float", "float", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_lifeline(*s, a[0].f, a[1].f, a[2].f, a[3].s));
+  });
+  r.method("Scene", "message", {"float", "float", "float", "float", "string", "bool", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_message(*s, a[0].f, a[1].f, a[2].f, a[3].f,
+        a[4].s, a[5].b, a[6].s));
+  });
+  r.method("Scene", "activation", {"float", "float", "float", "string", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_activation(*s, a[0].f, a[1].f, a[2].f, a[3].s, a[4].s));
+  });
+  r.method("Scene", "self_message", {"float", "float", "string", "string"}, "Group", [](void* p, Args& a) {
+    auto* s = static_cast<Scene*>(p);
+    return Value::object("Group", build_self_message(*s, a[0].f, a[1].f, a[2].s, a[3].s));
+  });
+  r.method("Shape", "set_attr", {"string", "string"}, "Shape", [](void* p, Args& a) {
+    auto* d = live_shape(p);
+    validate_attr(a[0].s, a[1].s);
+    for (Node* child : d->group->children)
+      if (child->tag != "text") child->attrs[a[0].s] = a[1].s;
+    return Value::object("Shape", p);
+  });
+  r.method("Shape", "cx", {}, "float", [](void* p, Args&) {
+    auto* d = live_shape(p);
+    return Value::real(d->x + d->w / 2.0);
+  });
+  r.method("Shape", "cy", {}, "float", [](void* p, Args&) {
+    auto* d = live_shape(p);
+    return Value::real(d->y + d->h / 2.0);
+  });
+  r.method("Grid", "cell", {"int", "int"}, "Shape", [](void* p, Args& a) {
+    auto* g = live_grid(p);
+    if (a[0].i < 0 || a[0].i >= g->cols) throw dslvm::Error("grid cell column out of range");
+    if (a[1].i < 0 || a[1].i >= g->rows) throw dslvm::Error("grid cell row out of range");
+    return Value::object("Shape", g->cells[size_t(a[1].i) * size_t(g->cols) + size_t(a[0].i)]);
   });
   r.method("Scene", "group", {}, "Group", [](void* p, Args&) {
     auto* s = static_cast<Scene*>(p); s->require_building();
