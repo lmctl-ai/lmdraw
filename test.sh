@@ -137,12 +137,15 @@ ok "24 frames are distinct and byte-identical on rerender"
 check_png build/rendered/title-card.png 960 540 || fail "title-card dimensions"
 ok "title-card PNG has expected dimensions"
 
-for spec in flow-pipeline:960:420 decision-flowchart:960:560 tree-org:960:520 table-metrics:960:430 chart-bars-lines:800:460 heatmap-grid:620:480 geometry-ellipse:800:460 arrow-helper:900:600; do
+for spec in flow-pipeline:960:420 decision-flowchart:960:560 tree-org:960:520 table-metrics:960:430 chart-bars-lines:800:460 heatmap-grid:620:480 geometry-ellipse:800:460 arrow-helper:900:600 \
+  flowchart-order-approval:960:600 etl-pipeline:1000:540 sequence-oauth-refresh:1000:620 state-machines:1100:800 \
+  architecture-layers:1000:720 org-chart-grid:1000:640 decision-tree:1100:640 swimlane-process:1300:660 \
+  timeline-gantt:1100:640 entity-relationship:1000:640; do
   IFS=: read -r example w h <<< "$spec"
   "$HOST" --dsl "$BUILD_DIR/$example.dslb" > /dev/null || fail "$example run"
   check_png "build/rendered/$example.png" "$w" "$h" || fail "$example PNG"
 done
-ok "seven drawing examples render PNGs at their canvas sizes"
+ok "eighteen drawing examples render PNGs at their canvas sizes"
 cp build/rendered/decision-flowchart.png "$BUILD_DIR/decision-marked.png"
 sed '/set_attr("marker-end", /d' examples/decision-flowchart.lms > "$BUILD_DIR/decision-no-markers.lms"
 "$LMSCRIPT" "$BUILD_DIR/decision-no-markers.lms" "$BUILD_DIR/decision-no-markers.dslb" >/dev/null || fail "marker comparison compile"

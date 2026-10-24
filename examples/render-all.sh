@@ -25,7 +25,9 @@ done
 gallery="hydrogen-spectrum kepler-second-law hohmann-transfer carnot-cycle lens-ray-diagram incline-free-body
   truss-bridge rc-lowpass lotka-volterra punnett-square mortgage-amortization npv-irr-cashflow
   relativity-lorentz kleiber-allometry damped-oscillator
-  decision-flowchart render-assets"
+  decision-flowchart render-assets
+  flowchart-order-approval etl-pipeline sequence-oauth-refresh state-machines architecture-layers
+  org-chart-grid decision-tree swimlane-process timeline-gantt entity-relationship"
 for name in $gallery; do cp "images/$name.png" "docs/images/$name.png"; done
 cp images/kepler-second-law.gif docs/images/kepler-second-law.gif
 rm -rf images

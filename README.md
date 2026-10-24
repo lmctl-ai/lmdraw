@@ -46,14 +46,31 @@ Each picture is one self-contained example. Paste the command under it into a te
 | <img src="docs/images/mortgage-amortization.png" width="290" alt="Yearly interest and principal bars for a 30-year mortgage with the remaining balance"> | <img src="docs/images/npv-irr-cashflow.png" width="290" alt="Cash-flow arrow diagram and the NPV versus discount rate curve"> |
 | $400k at 6.5 %: $510k of interest; +$300 a month saves $150k<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/mortgage-amortization.lms` | Cash-flow diagram for a $100k machine: NPV +$19.9k at 8 %, IRR 13.9 %<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/npv-irr-cashflow.lms` |
 
-### Diagram toolkit
+### Diagrams
 
-| Flowchart with wrapped labels | Imported SVG |
-| --- | --- |
-| <img src="docs/images/decision-flowchart.png" width="290" alt="Decision flowchart with elbow connectors and arrow markers"> | <img src="docs/images/render-assets.png" width="290" alt="An imported SVG automation ladder rendered to PNG"> |
-| Elbow edges, named markers, measured text wrapping<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/decision-flowchart.lms` | Static SVG files load as retained, editable scenes<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/render-assets.lms` |
+Flowcharts, pipelines, sequence diagrams, state machines, org charts, decision trees, swimlanes, Gantt timelines and ER sketches — all geometry is explicit lmscript, no auto-layout. `render-assets.lms` shows the imported-SVG path.
 
-All 28 examples, including the API tours (title card, nodes and groups, charts, heat map, tree, table, tweened frames), are listed in [examples/README.md](examples/README.md). `examples/render-all.sh` regenerates every picture above.
+| Order approval flowchart | ETL pipeline | OAuth refresh (sequence) |
+| --- | --- | --- |
+| <img src="docs/images/flowchart-order-approval.png" width="290" alt="Order approval flowchart with two decision diamonds, approve and reject branches and elbow connectors"> | <img src="docs/images/etl-pipeline.png" width="290" alt="ETL pipeline with source cylinders, a transform cluster box, dashed stage edges and a bidirectional warehouse sync arrow"> | <img src="docs/images/sequence-oauth-refresh.png" width="290" alt="OAuth refresh sequence diagram with lifelines, activation bars, numbered messages and a self-message loop"> |
+| Two gates — in stock, then payment — with yes/no branches<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/flowchart-order-approval.lms` | Extract, transform, load: cylinder datastores, dashed stage edges, one bidirectional sync<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/etl-pipeline.lms` | An expired access token rotated mid-request: introspect, refresh, 200 OK<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/sequence-oauth-refresh.lms` |
+
+| Four state machines | Layered architecture | Org chart on a grid |
+| --- | --- | --- |
+| <img src="docs/images/state-machines.png" width="290" alt="Four state machine panels: traffic light, TCP connection, door lock and thermostat with initial dots and labeled transitions"> | <img src="docs/images/architecture-layers.png" width="290" alt="Layered architecture diagram with presentation, service, data and external bands, elbow connectors and a folded-corner note"> | <img src="docs/images/org-chart-grid.png" width="290" alt="Org chart with a CEO, two VPs and six reports on an explicit grid, elbow tree connectors and one dotted-line report"> |
+| Traffic light, TCP, door lock, thermostat — one notation, 2×2 panels<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/state-machines.lms` | Four layers of components with cross-layer elbows and a database cylinder<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/architecture-layers.lms` | Grid-placed boxes, bus connectors, and a dotted line to a second manager<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/org-chart-grid.lms` |
+
+| Loan decision tree | Checkout swimlane | Release Gantt |
+| --- | --- | --- |
+| <img src="docs/images/decision-tree.png" width="290" alt="Loan approval decision tree with five split diamonds, six outcome leaves and branch labels"> | <img src="docs/images/swimlane-process.png" width="290" alt="Checkout swimlane diagram with customer, frontend, backend and payments lanes and labeled cross-lane flows"> | <img src="docs/images/timeline-gantt.png" width="290" alt="Eight-week Gantt chart with task bars, dependency arrows, a milestone diamond, a summary bracket and a today line"> |
+| Five splits, six outcomes: leaves coloured by approve/reject/neutral<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/decision-tree.lms` | Who does what: four lanes, decisions in place, dashed retry edge<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/swimlane-process.lms` | Dependencies between bar ends, a launch milestone and a today line<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/timeline-gantt.lms` |
+
+| Entity relationship sketch | Flowchart with wrapped labels | Imported SVG |
+| --- | --- | --- |
+| <img src="docs/images/entity-relationship.png" width="290" alt="ER sketch with five titled entities, relationship diamonds, 1:N cardinality labels and a referrer self-loop"> | <img src="docs/images/decision-flowchart.png" width="290" alt="Decision flowchart with elbow connectors and arrow markers"> | <img src="docs/images/render-assets.png" width="290" alt="An imported SVG automation ladder rendered to PNG"> |
+| Five entities, four relationships, 1:N labels, one self-loop<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/entity-relationship.lms` | Elbow edges, named markers, measured text wrapping<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/decision-flowchart.lms` | Static SVG files load as retained, editable scenes<br>`lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/render-assets.lms` |
+
+All 38 examples, including the API tours (title card, nodes and groups, charts, heat map, tree, table, tweened frames), are listed in [examples/README.md](examples/README.md). `examples/render-all.sh` regenerates every picture above.
 
 ## Quick start (1 minute)
 
