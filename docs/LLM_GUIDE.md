@@ -46,6 +46,21 @@ The compact schema is grouped by host type. The current members are:
 - legend(float x, float y, string labels_newline, string colors_csv, string text_color, string background) -> Group
 - polyline(string points, string stroke, float stroke_width) -> Node
 - path(string d, string fill, string stroke, float stroke_width) -> Node
+- box(float cx, float cy, float width, float height, string label, string fill, string stroke, float corner_radius, float label_size) -> Shape
+- box(Shape at, string anchor, float width, float height, string label, string fill, string stroke, float corner_radius, float label_size) -> Shape
+- diamond(float cx, float cy, float width, float height, string label, string fill, string stroke, float label_size) -> Shape
+- cylinder(float cx, float cy, float width, float height, string label, string fill, string stroke, float label_size) -> Shape
+- note(float x, float y, float width, float height, string label, string fill, string stroke, float label_size) -> Shape
+- cluster(float x, float y, float width, float height, string label, string fill, string stroke, float corner_radius, float label_size) -> Shape
+- connector(float x1, float y1, float x2, float y2, string routing, string start_marker, string end_marker, string dash, string color, float width, string label, float label_position, float label_dx, float label_dy) -> Group
+- connector(Shape a, string anchor_a, Shape b, string anchor_b, string routing, string start_marker, string end_marker, string dash, string color, float width, string label, float label_position, float label_dx, float label_dy) -> Group
+- connector(float x1, float y1, Shape b, string anchor_b, string routing, string start_marker, string end_marker, string dash, string color, float width, string label, float label_position, float label_dx, float label_dy) -> Group
+- connector(Shape a, string anchor_a, float x2, float y2, string routing, string start_marker, string end_marker, string dash, string color, float width, string label, float label_position, float label_dx, float label_dy) -> Group
+- grid(float x, float y, float width, float height, int rows, int cols, float gap_x, float gap_y) -> Grid
+- lifeline(float x, float y0, float y1, string color) -> Group
+- message(float x1, float y1, float x2, float y2, string label, bool dashed, string color) -> Group
+- activation(float x, float y0, float y1, string fill, string stroke) -> Group
+- self_message(float x, float y, string label, string color) -> Group
 - text(float x, float baseline_y, float size, string content, string fill) -> Node
 - text(float x, float baseline_y, float size, string content, string fill, float wrap_width) -> Node
 - group() -> Group
@@ -59,6 +74,16 @@ The compact schema is grouped by host type. The current members are:
 ### Node
 
 - set_attr(string name, string value) -> Node
+
+### Shape
+
+- set_attr(string name, string value) -> Shape
+- cx() -> float
+- cy() -> float
+
+### Grid
+
+- cell(int col, int row) -> Shape
 
 ### Group
 
@@ -91,6 +116,58 @@ The exact registry summary and signature list are generated from the live host:
 build/lmdraw --schema
 build/lmdraw --dsl-signatures
 lmscript --dsl-signatures schema/lmdraw.dsl.json
+```
+
+## Diagram building blocks
+
+Flowchart, sequence, state, and other hand-positioned diagrams use a set of
+labeled shapes and connectors. All layout stays explicit — the host never
+routes or auto-fits anything the script did not ask for.
+
+Scene.box draws a rounded rectangle with a centered, measured, wrapped label
+(`""` draws no label; a wrapped multi-line label recenters itself). The
+two-argument-coordinate overload centers the box at a float center; the Shape
+overload centers it on a named anchor of another shape, e.g. a grid cell.
+Scene.diamond is a labeled decision diamond; Scene.cylinder is a labeled
+datastore (height must exceed 20 px for the two 10 px caps); Scene.note is a
+folded-corner annotation with a top-left label; Scene.cluster is a labeled
+group box drawn behind its children (children keep their explicit positions,
+and the cluster label is a bold header in the stroke color). Shapes carry a 2
+px stroke unless stroke is `none`, and every constructor takes label, fill,
+stroke, and label size so no post-hoc restyling is needed. Shape.set_attr
+styles the shape body (everything but the label text); Shape.cx and Shape.cy
+return the center for placing extra labels.
+
+Each shape exposes named anchors `n`, `s`, `e`, `w`, `ne`, `nw`, `se`, `sw`,
+and `c`. Scene.connector draws an edge either between two anchors
+(`connector(shape_a, "e", shape_b, "w", ...)`) or between raw coordinates
+(`connector(x1, y1, x2, y2, ...)`; mixed point/anchor overloads exist too).
+`routing` is `straight`, `elbow` (one deterministic mid-run bend; vertical
+first for tall runs, horizontal first for wide runs), or `curve` (a cubic
+S-curve along the dominant axis). `start_marker` and `end_marker` accept
+`none`, `arrow`, `dot`, or `diamond`; `dash` is `none` or a stroke-dasharray
+list such as `"6 5"`. An empty-label edge omits the label; otherwise a 13 px
+label in the edge color is placed at `label_position` (0..1 measured along
+the drawn path) plus the pixel offset (`label_dx`, `label_dy`).
+
+Scene.grid covers an author-sized extent with an invisible rows-by-cols array
+of cell shapes separated by the given gaps; `grid.cell(col, row)` returns the
+cell shape, whose anchors (or plain center) position boxes and connectors.
+Cells render nothing until styled with `set_attr("fill", ...)` or
+`set_attr("stroke", ...)`.
+
+Scene.lifeline, Scene.message, Scene.activation, and Scene.self_message draw
+the sequence-diagram notation (dashed vertical lifeline, arrowed solid or
+dashed message with a centered label, activation bar, and a 60 px self-loop);
+each returns a group that can be restyled.
+
+```lmscript
+let slots = scene.grid(60.0, 60.0, 480.0, 240.0, 2, 3, 20.0, 20.0);
+let order = scene.box(slots.cell(0, 0), "c", 120.0, 44.0, "order", "#1e3247", "#4a6a88", 8.0, 14.0);
+let gate = scene.diamond(300.0, 120.0, 130.0, 70.0, "in stock?", "#1e3247", "#f5c16c", 13.0);
+let ship = scene.box(slots.cell(2, 1), "c", 120.0, 44.0, "ship", "#1e3247", "#6fbdb4", 22.0, 14.0);
+scene.connector(order, "e", gate, "w", "straight", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(gate, "s", ship, "n", "elbow", "none", "arrow", "6 5", "#8fb4d9", 2.0, "yes", 0.4, 8.0, 0.0);
 ```
 
 ## Node attributes

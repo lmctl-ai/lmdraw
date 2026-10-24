@@ -42,9 +42,9 @@ From a checkout, `lmscript examples/<name>.lms` does the same (put `build/` firs
 | `animated-ladder.lms` | 24 tweened frames with `ease`/`lerp`, encoded to a GIF when ffmpeg is installed |
 | `tween-morph.lms` | a path morph and a dash-offset draw-on animation |
 | `flow-pipeline.lms`, `decision-flowchart.lms`, `tree-org.lms` | connectors, named markers, wrapped labels |
-| `flowchart-order-approval.lms`, `decision-tree.lms`, `swimlane-process.lms` | flowchart idioms: decision diamonds, branch labels, lanes |
-| `etl-pipeline.lms`, `architecture-layers.lms`, `org-chart-grid.lms` | cylinders, cluster boxes, elbow connectors, folded-corner note |
-| `sequence-oauth-refresh.lms`, `state-machines.lms` | lifelines, activation bars, self-messages, state panels |
+| `flowchart-order-approval.lms`, `decision-tree.lms`, `swimlane-process.lms` | flowchart idioms on the host diagram API: decision diamonds, branch labels, lanes |
+| `etl-pipeline.lms`, `architecture-layers.lms`, `org-chart-grid.lms` | cylinders, cluster boxes, folded-corner note, elbow connectors, grid-placed boxes |
+| `sequence-oauth-refresh.lms`, `state-machines.lms` | host sequence notation (lifelines, activation bars, self-messages) and state panels |
 | `timeline-gantt.lms`, `entity-relationship.lms` | Gantt bars, dependencies, milestones, ER shapes and cardinalities |
 | `table-metrics.lms`, `heatmap-grid.lms`, `chart-bars-lines.lms` | tables, cell grids and hand-built charts |
 | `geometry-ellipse.lms`, `arrow-helper.lms` | geometry constructions, `arrow` and `axes` |
