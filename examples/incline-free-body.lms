@@ -1,0 +1,140 @@
+# Free-body diagram: a 10 kg crate sliding down a 30 degree ramp.
+# lmscript resolves gravity into components along and across the slope,
+# applies kinetic friction (mu_k = 0.2) and gets the acceleration from
+# Newton's second law; it also sweeps the ramp angle to show where the crate
+# starts to slide (static mu_s = 0.3). lmdraw draws the ramp, the rotated crate,
+# the force vectors to scale (1.5 px per newton) and the angle sweep.
+# Known answers: N = 84.96 N, friction 16.99 N, a = g (sin t - mu cos t) = 3.21 m/s^2;
+# sliding starts above atan(0.3) = 16.7 degrees.
+# Writes images/incline-free-body.png (900x620).
+out = ARGV.len() > 0 ? ARGV[0] : "build/incline-free-body.dslb";
+mkdir("images");
+mkdir("build");
+
+PI = 3.141592653589793;
+G = 9.81; MASS = 10.0; MU_K = 0.2; MU_S = 0.3; DEG = 30.0;
+fn sin_s(x) { let term = x; let total = x; for (k in range(1, 12)) { term = -term * x * x / ((2 * k) * (2 * k + 1)); total = total + term; } return total; }
+fn cos_s(x) { let term = 1.0; let total = 1.0; for (k in range(1, 12)) { term = -term * x * x / ((2 * k - 1) * (2 * k)); total = total + term; } return total; }
+fn atan_s(x) { let lo = 0.0; let hi = PI / 2.0; for (i in range(0, 60)) { let m = (lo + hi) / 2.0; if (sin_s(m) / cos_s(m) < x) { lo = m; } else { hi = m; } } return (lo + hi) / 2.0; }
+th = DEG * PI / 180.0;
+W = MASS * G;
+NRM = W * cos_s(th);
+FR = MU_K * NRM;
+ALONG = W * sin_s(th);
+ACC = (ALONG - FR) / MASS;
+CRIT = atan_s(MU_S) * 180.0 / PI;
+println(sprintf("weight %.2f N, normal %.2f N, friction %.2f N, downslope pull %.2f N, acceleration %.3f m/s^2; slides above %.1f deg", W, NRM, FR, ALONG, ACC, CRIT));
+
+# Geometry (screen y points down). The ramp falls to the right at DEG.
+c = cos_s(th); s = sin_s(th);
+TOPX = 60.0; TOPY = 585.0 - 520.0 * s / c; BX = 580.0; BY = 585.0;
+# Crate centre: 250 px down the slope from the top, 34 px above the surface.
+ux = c; uy = s;            # unit vector down the slope
+nx = s; ny = -c;           # outward normal (up and to the right)
+CX = TOPX + 250.0 * ux + 34.0 * nx;
+CY = TOPY + 250.0 * uy + 34.0 * ny;
+K = 1.5;                   # px per newton
+fn seg(x1, y1, x2, y2) { return str(x1) + " " + str(y1) + " " + str(x2) + " " + str(y2); }
+v_weight = seg(CX, CY, CX, CY + K * W);
+v_normal = seg(CX, CY, CX + K * NRM * nx, CY + K * NRM * ny);
+v_fric = seg(CX - 34.0 * nx, CY - 34.0 * ny, CX - 34.0 * nx - K * FR * ux, CY - 34.0 * ny - K * FR * uy);
+v_along = seg(CX, CY, CX + K * ALONG * ux, CY + K * ALONG * uy);
+v_perp = seg(CX, CY, CX - K * NRM * nx, CY - K * NRM * ny);
+guide = seg(CX + K * ALONG * ux, CY + K * ALONG * uy, CX, CY + K * W) + " " + seg(CX - K * NRM * nx, CY - K * NRM * ny, CX, CY + K * W);
+ramp = "M " + str(TOPX) + " " + str(TOPY) + " L " + str(BX) + " " + str(BY) + " L " + str(TOPX) + " " + str(BY) + " Z";
+crate = "rotate(" + str(DEG) + " " + str(CX) + " " + str(CY) + ")";
+crate_xy = [str(CX - 40.0), str(CY - 34.0)];
+ang_arc = "M " + str(BX - 70.0) + " " + str(BY) + " A 70 70 0 0 1 " + str(BX - 70.0 * c) + " " + str(BY - 70.0 * s);
+lbl = [str(CX + 8.0), str(CY + K * W + 4.0),
+       str(CX + K * NRM * nx + 8.0), str(CY + K * NRM * ny),
+       str(CX - 34.0 * nx - K * FR * ux - 4.0), str(CY - 34.0 * ny - K * FR * uy + 28.0),
+       str(CX + K * ALONG * ux + 8.0), str(CY + K * ALONG * uy - 2.0),
+       str(CX - K * NRM * nx - 10.0), str(CY - K * NRM * ny + 4.0)];
+t_w = sprintf("mg = %.1f N", W);
+t_n = sprintf("N = %.1f N", NRM);
+t_f = sprintf("friction μN = %.1f N", FR);
+t_a = sprintf("mg sin θ = %.1f N", ALONG);
+t_p = sprintf("mg cos θ = %.1f N", NRM);
+res = sprintf("%.1f N\n%.1f N\n%.1f N\n%.1f N", ALONG, FR, ALONG - FR, NRM);
+acc_txt = sprintf("a = %.2f m/s²", ACC);
+# Angle sweep: a(theta) = g (sin - mu_k cos) once tan(theta) > mu_s; 0..60 deg on x 650..860, 0..8 m/s^2 on y 560..440.
+sweep = "";
+for (d in range(0, 61)) {
+  let t = d * PI / 180.0;
+  let a = d > CRIT ? G * (sin_s(t) - MU_K * cos_s(t)) : 0.0;
+  sweep = sweep + str(650.0 + d * 3.5) + " " + str(560.0 - a * 15.0) + " ";
+}
+crit_x = str(650.0 + CRIT * 3.5);
+now_xy = [str(650.0 + DEG * 3.5), str(560.0 - ACC * 15.0)];
+crit_txt = sprintf("starts sliding at %.1f°", CRIT);
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 620, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Free-body diagram: a crate sliding down a ramp", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "10 kg, 30° slope, kinetic friction μk = 0.2. Forces drawn to scale, 1.5 px per newton", "#9fb3c8");
+
+scene.path(${ramp}, "#1d2b38", "#5b7690", 2.0);
+scene.path(${ang_arc}, "none", "#9fb3c8", 1.5);
+scene.text(448.0, 576.0, 14.0, "θ = 30°", "#9fb3c8");
+let box = scene.rect(0.0, 0.0, 80.0, 68.0, "#3d5a73");
+box.set_attr("x", ${crate_xy[0]});
+box.set_attr("y", ${crate_xy[1]});
+box.set_attr("transform", ${crate});
+box.set_attr("stroke", "#7fa8d0");
+box.set_attr("stroke-width", "2");
+
+# Components (dashed) first, then the three real forces.
+let gd = scene.path("M 0 0", "none", "#5b7690", 1.0);
+gd.set_attr("d", "M " + ${guide});
+gd.set_attr("stroke-dasharray", "3 4");
+scene.polyline(${v_along}, "#f5c16c", 2.0).set_attr("stroke-dasharray", "6 4").set_attr("marker-end", "arrow");
+scene.polyline(${v_perp}, "#f5c16c", 2.0).set_attr("stroke-dasharray", "6 4").set_attr("marker-end", "arrow");
+scene.polyline(${v_weight}, "#e6edf3", 3.5).set_attr("marker-end", "arrow");
+scene.polyline(${v_normal}, "#6fbdb4", 3.5).set_attr("marker-end", "arrow");
+scene.polyline(${v_fric}, "#f08a6c", 3.5).set_attr("marker-end", "arrow");
+scene.circle(0.0, 0.0, 4.0, "#e6edf3").set_attr("cx", ${crate_xy[0]}).set_attr("cy", ${crate_xy[1]}).set_attr("transform", "translate(40 34)");
+scene.text(0.0, 0.0, 13.0, ${t_w}, "#e6edf3").set_attr("x", ${lbl[0]}).set_attr("y", ${lbl[1]});
+scene.text(0.0, 0.0, 13.0, ${t_n}, "#6fbdb4").set_attr("x", ${lbl[2]}).set_attr("y", ${lbl[3]});
+scene.text(0.0, 0.0, 13.0, ${t_f}, "#f08a6c").set_attr("x", ${lbl[4]}).set_attr("y", ${lbl[5]}).set_attr("text-anchor", "end");
+scene.text(0.0, 0.0, 12.0, ${t_a}, "#f5c16c").set_attr("x", ${lbl[6]}).set_attr("y", ${lbl[7]});
+scene.text(0.0, 0.0, 12.0, ${t_p}, "#f5c16c").set_attr("x", ${lbl[8]}).set_attr("y", ${lbl[9]}).set_attr("text-anchor", "end");
+
+let panel = scene.rect(626.0, 104.0, 256.0, 200.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(642.0, 130.0, 14.0, "Newton's second law", "#e6edf3").set_attr("font-weight", "700");
+scene.text(642.0, 154.0, 12.5, "down the slope  mg sin θ\nfriction up the slope  μk N\nnet force\nnormal N = mg cos θ", "#9fb3c8");
+scene.text(866.0, 154.0, 12.5, ${res}, "#e6edf3").set_attr("text-anchor", "end");
+scene.line(642.0, 222.0, 866.0, 222.0, "#2c4156", 1.0);
+scene.text(642.0, 250.0, 20.0, ${acc_txt}, "#e6edf3").set_attr("font-weight", "700");
+scene.text(642.0, 274.0, 12.0, "= g (sin θ − μk cos θ), independent of mass", "#9fb3c8", 230.0);
+
+let wi = scene.rect(626.0, 320.0, 256.0, 280.0, "#1b1a26");
+wi.set_attr("stroke", "#4b3f6b");
+wi.set_attr("rx", "8");
+scene.text(642.0, 346.0, 14.0, "What if the ramp were steeper?", "#b49cf0").set_attr("font-weight", "700");
+scene.text(642.0, 368.0, 12.0, "Static friction μs = 0.3 holds the crate until tan θ exceeds 0.3.", "#c9d6e2", 230.0);
+scene.line(650.0, 560.0, 860.0, 560.0, "#7f97ad", 1.0);
+scene.line(650.0, 440.0, 650.0, 560.0, "#7f97ad", 1.0);
+for (k in range(0, 4)) {
+  scene.text(650.0 + float(k) * 70.0, 576.0, 11.0, str(20 * k) + "°", "#9fb3c8").set_attr("text-anchor", "middle");
+}
+scene.text(644.0, 444.0, 11.0, "8", "#9fb3c8").set_attr("text-anchor", "end");
+scene.text(644.0, 504.0, 11.0, "4", "#9fb3c8").set_attr("text-anchor", "end");
+scene.text(644.0, 564.0, 11.0, "0", "#9fb3c8").set_attr("text-anchor", "end");
+scene.text(660.0, 430.0, 11.0, "a (m/s²) vs ramp angle", "#9fb3c8");
+let cl = scene.line(0.0, 440.0, 0.0, 560.0, "#f08a6c", 1.0);
+cl.set_attr("x1", ${crit_x});
+cl.set_attr("x2", ${crit_x});
+cl.set_attr("stroke-dasharray", "3 3");
+scene.polyline(${sweep}, "#f5c16c", 2.5);
+scene.circle(0.0, 0.0, 5.0, "#6fbdb4").set_attr("cx", ${now_xy[0]}).set_attr("cy", ${now_xy[1]});
+scene.text(0.0, 0.0, 11.0, ${crit_txt}, "#f08a6c").set_attr("x", ${crit_x}).set_attr("y", "552").set_attr("transform", "translate(6 0)");
+scene.text(0.0, 0.0, 11.0, "this ramp", "#6fbdb4").set_attr("x", ${now_xy[0]}).set_attr("y", ${now_xy[1]}).set_attr("transform", "translate(-8 -8)").set_attr("text-anchor", "end");
+scene.render_png("images/incline-free-body.png", 900, 620, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/incline-free-body.png");

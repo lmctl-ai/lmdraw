@@ -1,0 +1,37 @@
+# Tweened frames: fades an imported SVG stage in and slides a retained marker
+# over 24 deterministic frames using range, ease and lerp; ffmpeg (when
+# installed) turns the frames into a GIF. The SVG is fetched from the
+# repository when run outside it (lmctl autorun).
+# Writes images/animated-ladder.png (frame 12, 640x240) and images/animated-ladder.gif.
+out = ARGV.len() > 0 ? ARGV[0] : "build/animated-ladder.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+mkdir("assets");
+svg = "assets/automation-ladder.svg";
+if (!file_exists(svg)) { write_file(svg, http_get("https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/" + svg)); }
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+let stage = scene.load_svg("assets/automation-ladder.svg", "level-one-stage");
+let marker = scene.circle(855.0, 325.0, 6.0, "#f5c16c");
+for (i in range(0, 24)) {
+  let t = float(i) / 23.0;
+  let opacity = lerp(0.22, 1.0, ease(t));
+  stage.set_attr("opacity", str(opacity));
+  marker.set_attr("cx", str(lerp(855.0, 925.0, ease(t))));
+  marker.set_attr("opacity", str(lerp(0.15, 0.9, ease(t))));
+  scene.render_png("build/rendered/ladder-" + str(i) + ".png", 640, 240, 1);
+}
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/ladder-12.png", "images/animated-ladder.png");
+println("wrote images/animated-ladder.png");
+if (which("ffmpeg") != null) {
+  g = system ffmpeg -y -loglevel error -framerate 12 -i build/rendered/ladder-%d.png -vf "split[s0][s1];[s0]palettegen=max_colors=64[p];[s1][p]paletteuse=dither=none" -loop 0 images/animated-ladder.gif;
+  assert(g.code == 0);
+  println("wrote images/animated-ladder.gif");
+} else {
+  println("ffmpeg not found: skipped images/animated-ladder.gif (24 frames are in build/rendered/)");
+}

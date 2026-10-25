@@ -1,0 +1,175 @@
+# Kepler's second law: a planet sweeps equal areas in equal times.
+# An e = 0.6 orbit is cut into 12 wedges of equal time by solving Kepler's
+# equation M = E - e sin E (Newton's method, in the lmdraw VM, which has sin/cos).
+# lmscript re-solves it independently and checks the 12 wedge areas with the
+# shoelace formula; the still shows the wedges, the animation shows one
+# constant-area wedge riding the orbit while the speed arrow grows and shrinks.
+# Known answers: wedge area = pi a b / 12 each; speed ratio v_peri / v_aph = (1+e)/(1-e) = 4.
+# Writes images/kepler-second-law.png (900x540) and, when ffmpeg is installed,
+# images/kepler-second-law.gif (60 frames, 600 px wide).
+out = ARGV.len() > 0 ? ARGV[0] : "build/kepler-second-law.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+
+PI = 3.141592653589793;
+ECC = 0.6;
+A = 230.0;
+B = A * sqrt(1.0 - ECC * ECC);
+# lmscript has no trig built-ins: range-reduced Taylor series are plenty here.
+fn reduce(x) { let t = x; while (t > PI) { t = t - 2.0 * PI; } while (t < -PI) { t = t + 2.0 * PI; } return t; }
+fn sin_s(x) { let t = reduce(x); let term = t; let total = t; for (k in range(1, 11)) { term = -term * t * t / ((2 * k) * (2 * k + 1)); total = total + term; } return total; }
+fn cos_s(x) { let t = reduce(x); let term = 1.0; let total = 1.0; for (k in range(1, 11)) { term = -term * t * t / ((2 * k - 1) * (2 * k)); total = total + term; } return total; }
+fn kepler_E(m) { let e = m + ECC * sin_s(m); for (i in range(0, 8)) { e = e - (e - ECC * sin_s(e) - m) / (1.0 - ECC * cos_s(e)); } return e; }
+
+# Shoelace area of each equal-time wedge (focus at the origin), 100 arc samples per wedge.
+areas = [];
+for (k in range(0, 12)) {
+  let area = 0.0;
+  let px = 0.0; let py = 0.0;
+  for (j in range(0, 101)) {
+    let e = kepler_E(2.0 * PI * (k + j / 100.0) / 12.0);
+    let x = A * (cos_s(e) - ECC); let y = B * sin_s(e);
+    area = area + (px * y - x * py);
+    px = x; py = y;
+  }
+  push(areas, area / 2.0);
+}
+exact = PI * A * B / 12.0;
+worst = 0.0;
+for (a in areas) { worst = max(worst, abs(a - exact) / exact); }
+println(sprintf("12 wedge areas: min %.1f, max %.1f px^2, exact pi a b / 12 = %.1f (worst deviation %.3f%%)", min(areas), max(areas), exact, 100.0 * worst));
+assert(worst < 0.001, "equal-time wedges must have equal areas");
+area_txt = sprintf("%.0f px²", exact);
+dev_txt = sprintf("%.3f%%", 100.0 * worst);
+ratio_txt = sprintf("%.1f×", (1.0 + ECC) / (1.0 - ECC));
+# angle swept by the perihelion wedge vs the aphelion wedge (true anomaly), from cos/sin pairs
+e_peri = kepler_E(2.0 * PI / 12.0);
+e_aph0 = kepler_E(2.0 * PI * 5.5 / 12.0);
+e_aph1 = kepler_E(2.0 * PI * 6.5 / 12.0);
+fn true_anom(e) { let x = cos_s(e) - ECC; let y = sqrt(1.0 - ECC * ECC) * sin_s(e); let c = x / sqrt(x * x + y * y); let ang = 0.0; let lo = 0.0; let hi = PI; for (i in range(0, 60)) { ang = (lo + hi) / 2.0; if (cos_s(ang) > c) { lo = ang; } else { hi = ang; } } return y < 0.0 ? -ang : ang; }
+sweep_peri = (true_anom(e_peri) - 0.0) * 180.0 / PI;
+sweep_aph = (true_anom(e_aph1) + 2.0 * PI - true_anom(e_aph0)) * 180.0 / PI;
+if (sweep_aph > 360.0) { sweep_aph = sweep_aph - 360.0; }
+sweep_txt = sprintf("%.0f° near the Sun vs %.0f° far away", sweep_peri, sweep_aph);
+println("one twelfth of a year sweeps " + sweep_txt);
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+let e = 0.6;
+let a = 230.0;
+let b = a * sqrt(1.0 - e * e);
+let fx = 470.0;
+let fy = 320.0;
+let tau = 6.283185307179586;
+
+# Still: 12 equal-time wedges, alternating colours, planet positions at wedge edges.
+scene.canvas(900, 540, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Kepler's second law: equal areas in equal times", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "An e = 0.6 orbit cut into 12 slices of equal time (Kepler's equation M = E − e sin E). Every slice has the same area.", "#9fb3c8");
+let even_d = "";
+let odd_d = "";
+let dots_d = "";
+for (k in range(0, 12)) {
+  let d = "M " + str(fx) + " " + str(fy);
+  for (j in range(0, 25)) {
+    let m = tau * (float(k) + float(j) / 24.0) / 12.0;
+    let ea = m;
+    for (it in range(0, 12)) { ea = ea - (ea - e * sin(ea) - m) / (1.0 - e * cos(ea)); }
+    let x = fx + a * (cos(ea) - e);
+    let y = fy - b * sin(ea);
+    d = d + " L " + str(x) + " " + str(y);
+    if (j == 0) { dots_d = dots_d + "M " + str(x - 4.0) + " " + str(y) + " A 4 4 0 1 0 " + str(x + 4.0) + " " + str(y) + " A 4 4 0 1 0 " + str(x - 4.0) + " " + str(y) + " Z "; }
+  }
+  if (k % 2 == 0) { even_d = even_d + d + " Z "; } else { odd_d = odd_d + d + " Z "; }
+}
+scene.path(even_d, "#33698a", "#0f1720", 1.0);
+scene.path(odd_d, "#1f3d52", "#0f1720", 1.0);
+let orbit = scene.ellipse(fx - a * e, fy, a, b, "none");
+orbit.set_attr("stroke", "#7fa8d0");
+orbit.set_attr("stroke-width", "1.5");
+scene.path(dots_d, "#e6edf3", "none", 1.0);
+scene.circle(fx, fy, 13.0, "#f5c16c");
+scene.circle(fx, fy, 19.0, "#f5c16c").set_attr("opacity", "0.25");
+scene.circle(fx - 2.0 * a * e, fy, 3.0, "#5b7690");
+scene.text(fx - 2.0 * a * e, fy + 18.0, 11.0, "empty focus", "#5b7690").set_attr("text-anchor", "middle");
+scene.text(fx, fy + 36.0, 12.0, "Sun", "#f5c16c").set_attr("text-anchor", "middle");
+scene.text(fx + a * (1.0 - e) + 10.0, fy - 6.0, 13.0, "perihelion", "#e6edf3");
+scene.text(fx + a * (1.0 - e) + 10.0, fy + 12.0, 12.0, "fast: wide angle", "#9fb3c8");
+scene.text(fx - a * (1.0 + e) - 10.0, fy - 6.0, 13.0, "aphelion", "#e6edf3").set_attr("text-anchor", "end");
+scene.text(fx - a * (1.0 + e) - 10.0, fy + 12.0, 12.0, "slow: narrow", "#9fb3c8").set_attr("text-anchor", "end");
+
+let panel = scene.rect(680.0, 110.0, 196.0, 350.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(694.0, 136.0, 14.0, "Checked in lmscript", "#e6edf3").set_attr("font-weight", "700");
+scene.text(694.0, 164.0, 12.0, "area of every slice", "#9fb3c8");
+scene.text(694.0, 186.0, 18.0, ${area_txt}, "#e6edf3").set_attr("font-weight", "700");
+scene.text(694.0, 210.0, 12.0, "π a b / 12, worst slice off by", "#9fb3c8");
+scene.text(694.0, 230.0, 14.0, ${dev_txt}, "#8fd694");
+scene.text(694.0, 262.0, 12.0, "speed at perihelion vs aphelion", "#9fb3c8");
+scene.text(694.0, 284.0, 18.0, ${ratio_txt}, "#e6edf3").set_attr("font-weight", "700");
+scene.text(694.0, 304.0, 12.0, "(1 + e) / (1 − e)", "#9fb3c8");
+scene.text(694.0, 336.0, 12.0, "angle swept in 1/12 year", "#9fb3c8");
+scene.text(694.0, 354.0, 12.0, ${sweep_txt}, "#e6edf3", 172.0);
+scene.text(694.0, 410.0, 12.0, "Angular momentum is conserved, so r² dθ/dt is constant.", "#9fb3c8", 172.0);
+scene.render_png("build/rendered/kepler-second-law.png", 900, 540, 1);
+
+# Animation: one constant-area wedge (1/12 of the period) rides the orbit.
+scene.canvas(900, 540, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Kepler's second law: equal areas in equal times", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "The shaded wedge always spans 1/12 of the orbital period. Its shape changes; its area does not.", "#9fb3c8");
+let orbit2 = scene.ellipse(fx - a * e, fy, a, b, "none");
+orbit2.set_attr("stroke", "#7fa8d0");
+orbit2.set_attr("stroke-width", "1.5");
+let wedge = scene.path("M 0 0 L 1 1 Z", "#2f5f7a", "#7fa8d0", 1.0);
+wedge.set_attr("opacity", "0.9");
+scene.circle(fx, fy, 13.0, "#f5c16c");
+scene.circle(fx, fy, 19.0, "#f5c16c").set_attr("opacity", "0.25");
+let vel = scene.line(0.0, 0.0, 1.0, 1.0, "#f08a6c", 3.0);
+vel.set_attr("marker-end", "arrow");
+let planet = scene.circle(0.0, 0.0, 7.0, "#6fbdb4");
+scene.text(694.0, 160.0, 13.0, "wedge area (any frame)", "#9fb3c8");
+scene.text(694.0, 186.0, 20.0, ${area_txt}, "#e6edf3").set_attr("font-weight", "700");
+scene.text(694.0, 230.0, 13.0, "speed arrow", "#f08a6c");
+scene.text(694.0, 250.0, 12.0, "4× longer at perihelion", "#9fb3c8");
+for (f in range(0, 60)) {
+  let m1 = tau * float(f) / 60.0;
+  let d = "M " + str(fx) + " " + str(fy);
+  let px = 0.0;
+  let py = 0.0;
+  let ep = 0.0;
+  for (j in range(0, 25)) {
+    let m = m1 - tau / 12.0 + tau / 12.0 * float(j) / 24.0;
+    let ea = m;
+    for (it in range(0, 12)) { ea = ea - (ea - e * sin(ea) - m) / (1.0 - e * cos(ea)); }
+    px = fx + a * (cos(ea) - e);
+    py = fy - b * sin(ea);
+    ep = ea;
+    d = d + " L " + str(px) + " " + str(py);
+  }
+  wedge.set_attr("d", d + " Z");
+  planet.set_attr("cx", str(px));
+  planet.set_attr("cy", str(py));
+  # velocity = dE/dt * d(position)/dE, with dE/dt proportional to 1 / (1 - e cos E)
+  let k = 32.0 / (1.0 - e * cos(ep));
+  vel.set_attr("x1", str(px));
+  vel.set_attr("y1", str(py));
+  vel.set_attr("x2", str(px - k * a * sin(ep) / a));
+  vel.set_attr("y2", str(py - k * b * cos(ep) / a));
+  scene.render_png("build/rendered/kepler-frame-" + str(f) + ".png", 900, 540, 1);
+}
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/kepler-second-law.png", "images/kepler-second-law.png");
+println("wrote images/kepler-second-law.png");
+if (which("ffmpeg") != null) {
+  g = system ffmpeg -y -loglevel error -framerate 15 -i build/rendered/kepler-frame-%d.png -vf "scale=600:-1:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=48:stats_mode=diff[p];[s1][p]paletteuse=dither=none:diff_mode=rectangle" -loop 0 images/kepler-second-law.gif;
+  if (g.code != 0) { println(g.stderr); }
+  assert(g.code == 0);
+  println("wrote images/kepler-second-law.gif");
+} else {
+  println("ffmpeg not found: skipped images/kepler-second-law.gif (frames are in build/rendered/)");
+}

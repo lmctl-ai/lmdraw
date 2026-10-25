@@ -1,0 +1,27 @@
+# Title card: styled text, shapes and an accent rule on one canvas.
+# Writes images/title-card.png (960x540).
+out = ARGV.len() > 0 ? ARGV[0] : "build/title-card.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(960, 540, "#152438");
+let panel = scene.rect(58.0, 56.0, 844.0, 428.0, "#1f344b");
+panel.set_attr("stroke", "#38536c");
+panel.set_attr("stroke-width", "2");
+scene.rect(58.0, 56.0, 12.0, 428.0, "#f5c16c");
+scene.circle(818.0, 166.0, 82.0, "#294c62");
+scene.circle(818.0, 166.0, 49.0, "#6fbdb4");
+scene.text(104.0, 190.0, 24.0, "2D drawings, scripted", "#f5c16c");
+scene.text(104.0, 270.0, 51.0, "One scene. Every frame.", "#f5f8fb");
+scene.text(104.0, 328.0, 23.0, "Readable vectors,\nreal type and predictable output.", "#dce7f0");
+scene.line(104.0, 388.0, 772.0, 388.0, "#6fbdb4", 3.0);
+scene.text(104.0, 436.0, 17.0, "lmdraw / retained vector scene / 2026", "#b8c8d6");
+scene.render_png("build/rendered/title-card.png", 960, 540, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/title-card.png", "images/title-card.png");
+println("wrote images/title-card.png");

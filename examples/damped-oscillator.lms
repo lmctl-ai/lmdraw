@@ -1,0 +1,166 @@
+# Damped harmonic oscillator: x'' + 2ζω₀x' + ω₀²x = 0 across four regimes.
+# Released from x(0) = 1, x'(0) = 0 with ω₀ = 1 rad/s. lmscript integrates
+# four damping ratios (ζ = 0.15, 0.40, 1.00, 2.00) with classic 4th-order
+# Runge-Kutta, finds the first overshoot of the underdamped curves and the 2%
+# settling time of each regime, and compares them in time domain and phase
+# space; lmdraw renders both plots and labels the regimes with Scene.legend.
+# Writes images/damped-oscillator.png (900x620).
+out = ARGV.len() > 0 ? ARGV[0] : "build/damped-oscillator.dslb";
+mkdir("images");
+mkdir("build");
+
+fn exp_neg(x) {
+  let s = x / 8.0;
+  let term = 1.0;
+  let sum = 1.0;
+  for (k in range(1, 20)) {
+    term = -term * s / k;
+    sum = sum + term;
+  }
+  let r = sum;
+  for (k in range(0, 3)) { r = r * r; }
+  return r;
+}
+
+# Time plot: t = 0 .. 16 on x = 86 .. 556, x = -1.0 .. 1.0 on y = 110 .. 510 (y0 = 310).
+fn tx(t) { return 86.0 + t / 16.0 * 470.0; }
+fn xy(x) { return 310.0 - x * 200.0; }
+
+# Phase inset: x = -1.0 .. 1.0 on x = 612 .. 852, v = -1.0 .. 1.0 on y = 140 .. 340.
+fn phx(x) { return 732.0 + x * 110.0; }
+fn phy(v) { return 240.0 - v * 90.0; }
+
+zetas = [0.15, 0.40, 1.00, 2.00];
+curves_t = ["", "", "", ""];
+curves_ph = ["", "", "", ""];
+min_x = [1.0, 1.0, 1.0, 1.0];
+settle_t = [0.0, 0.0, 0.0, 0.0];
+
+dt = 0.04;
+steps = 400;
+for (r in range(0, 4)) {
+  let z = zetas[r];
+  let x = 1.0;
+  let v = 0.0;
+  let ct = "";
+  let cp = "";
+  let settled = 0.0;
+  for (i in range(0, steps + 1)) {
+    let t = i * dt;
+    ct = ct + str(tx(t)) + " " + str(xy(x)) + " ";
+    if (i % 2 == 0) {
+      cp = cp + str(phx(x)) + " " + str(phy(v)) + " ";
+    }
+    if (x < min_x[r]) { min_x[r] = x; }
+    if (abs(x) > 0.02 || abs(v) > 0.02) { settled = t; }
+    # RK4 step for x' = v, v' = -2*z*v - x
+    let k1x = v;
+    let k1v = -2.0 * z * v - x;
+    let x2 = x + 0.5 * dt * k1x;
+    let v2 = v + 0.5 * dt * k1v;
+    let k2x = v2;
+    let k2v = -2.0 * z * v2 - x2;
+    let x3 = x + 0.5 * dt * k2x;
+    let v3 = v + 0.5 * dt * k2v;
+    let k3x = v3;
+    let k3v = -2.0 * z * v3 - x3;
+    let x4 = x + dt * k3x;
+    let v4 = v + dt * k3v;
+    let k4x = v4;
+    let k4v = -2.0 * z * v4 - x4;
+    x = x + dt / 6.0 * (k1x + 2.0 * k2x + 2.0 * k3x + k4x);
+    v = v + dt / 6.0 * (k1v + 2.0 * k2v + 2.0 * k3v + k4v);
+  }
+  curves_t[r] = ct;
+  curves_ph[r] = cp;
+  settle_t[r] = settled;
+}
+
+# Envelope ±e^(-0.15 t) / √(1 - 0.15^2) for ζ = 0.15.
+env_scale = 1.0 / sqrt(1.0 - 0.15 * 0.15);
+env_hi = "";
+env_lo = "";
+for (i in range(0, 161)) {
+  let t = i * 0.1;
+  let e = clamp(env_scale * exp_neg(0.15 * t), 0.0, 1.0);
+  env_hi = env_hi + str(tx(t)) + " " + str(xy(e)) + " ";
+  env_lo = env_lo + str(tx(t)) + " " + str(xy(-e)) + " ";
+}
+
+println(sprintf("overshoot: ζ=0.15 -> %.1f%%, ζ=0.40 -> %.1f%%; 2%% settling: ζ=1.0 -> %.2f s, ζ=2.0 -> %.2f s",
+  -100.0 * min_x[0], -100.0 * min_x[1], settle_t[2], settle_t[3]));
+assert(settle_t[2] < settle_t[0] && settle_t[2] < settle_t[3], "critical damping must settle fastest");
+
+tbl_over = sprintf("%.1f%%\n%.1f%%\n0.0%%\n0.0%%", -100.0 * min_x[0], -100.0 * min_x[1]);
+tbl_settle = sprintf("> 16 s\n%.1f s\n%.1f s\n%.1f s", settle_t[1], settle_t[2], settle_t[3]);
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 620, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Damped oscillator: why critical damping (ζ = 1) settles fastest", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "mx'' + cx' + kx = 0 with ζ = c / (2√(mk)): underdamped rings, overdamped creeps, critical returns without overshoot", "#9fb3c8");
+
+# Grid and axes for x(t).
+for (k in range(0, 5)) {
+  let y = 110.0 + float(k) * 100.0;
+  scene.line(86.0, y, 556.0, y, "#1d2d3d", 1.0);
+}
+for (k in range(1, 9)) {
+  let x = 86.0 + float(k) * 470.0 / 8.0;
+  scene.line(x, 110.0, x, 510.0, "#1d2d3d", 1.0);
+}
+scene.line(86.0, 310.0, 556.0, 310.0, "#3a526a", 1.2);
+scene.axes(86.0, 110.0, 470.0, 400.0, 0.0, 16.0, -1.0, 1.0, 8, "#7f97ad");
+scene.text(321.0, 558.0, 13.0, "dimensionless time ω₀t (rad)", "#9fb3c8").set_attr("text-anchor", "middle");
+let yl = scene.text(28.0, 310.0, 13.0, "displacement x(t) / x₀", "#9fb3c8");
+yl.set_attr("text-anchor", "middle");
+yl.set_attr("transform", "rotate(-90 28 310)");
+
+# Envelope and 4 regime curves.
+scene.polyline(${env_hi}, "#5b7690", 1.3).set_attr("stroke-dasharray", "5 4");
+scene.polyline(${env_lo}, "#5b7690", 1.3).set_attr("stroke-dasharray", "5 4");
+scene.polyline(${curves_t[3]}, "#b49cf0", 2.4).set_attr("stroke-dasharray", "8 4");
+scene.polyline(${curves_t[1]}, "#7fa8d0", 2.4);
+scene.polyline(${curves_t[0]}, "#f5c16c", 2.8);
+scene.polyline(${curves_t[2]}, "#6fbdb4", 3.4);
+
+# Scene.legend in the upper-right of the time plot.
+scene.legend(246.0, 118.0,
+  "ζ = 0.15 underdamped (62% overshoot)\nζ = 0.40 underdamped (25% overshoot)\nζ = 1.00 critically damped (fastest)\nζ = 2.00 overdamped (sluggish creep)\n±e^(−0.15ω₀t) decay envelope",
+  "#f5c16c,#7fa8d0,#6fbdb4,#b49cf0,#5b7690", "#e6edf3");
+
+# Right column: phase portrait (x vs v/ω₀) and regime comparison table.
+let p1 = scene.rect(590.0, 108.0, 280.0, 260.0, "#16222e");
+p1.set_attr("stroke", "#2c4156");
+p1.set_attr("rx", "8");
+scene.text(606.0, 132.0, 14.0, "Phase portrait: (x, x'/ω₀) → (0, 0)", "#e6edf3").set_attr("font-weight", "700");
+scene.line(622.0, 240.0, 842.0, 240.0, "#2c4156", 1.0);
+scene.line(732.0, 150.0, 732.0, 330.0, "#2c4156", 1.0);
+scene.polyline(${curves_ph[3]}, "#b49cf0", 2.0).set_attr("stroke-dasharray", "6 3");
+scene.polyline(${curves_ph[1]}, "#7fa8d0", 2.0);
+scene.polyline(${curves_ph[0]}, "#f5c16c", 2.2);
+scene.polyline(${curves_ph[2]}, "#6fbdb4", 2.8);
+scene.circle(842.0, 240.0, 4.5, "#e6edf3");
+scene.circle(732.0, 240.0, 4.5, "#6fbdb4");
+scene.text(852.0, 226.0, 11.5, "start (1, 0)", "#9fb3c8").set_attr("text-anchor", "end");
+scene.text(740.0, 232.0, 11.5, "(0, 0)", "#6fbdb4");
+scene.text(732.0, 354.0, 12.0, "spirals (ζ < 1) vs direct node (ζ ≥ 1)", "#9fb3c8").set_attr("text-anchor", "middle");
+
+let p2 = scene.rect(590.0, 384.0, 280.0, 194.0, "#1b1a26");
+p2.set_attr("stroke", "#4b3f6b");
+p2.set_attr("rx", "8");
+scene.text(606.0, 410.0, 14.0, "Settling time (|x|, |v| ≤ 2%)", "#b49cf0").set_attr("font-weight", "700");
+scene.text(606.0, 434.0, 12.0, "regime", "#9fb3c8");
+scene.text(756.0, 434.0, 12.0, "overshoot", "#9fb3c8").set_attr("text-anchor", "end");
+scene.text(854.0, 434.0, 12.0, "2% settle", "#9fb3c8").set_attr("text-anchor", "end");
+scene.text(606.0, 456.0, 12.5, "ζ = 0.15\nζ = 0.40\nζ = 1.00 ✓\nζ = 2.00", "#e6edf3");
+scene.text(756.0, 456.0, 12.5, ${tbl_over}, "#c9d6e2").set_attr("text-anchor", "end");
+scene.text(854.0, 456.0, 12.5, ${tbl_settle}, "#e6edf3").set_attr("text-anchor", "end");
+scene.text(606.0, 542.0, 11.5, "Door closers, car shocks, and analog meters target ζ ≈ 0.7..1.0 to avoid ringing.", "#c9d6e2", 250.0);
+
+scene.render_png("images/damped-oscillator.png", 900, 620, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/damped-oscillator.png");

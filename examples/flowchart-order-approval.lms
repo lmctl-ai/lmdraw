@@ -1,0 +1,54 @@
+# Order approval flowchart: start stadium, validation, two decision
+# diamonds in series (in stock? payment ok?), approve/reject branches,
+# elbow connectors with named markers and yes/no labels. Shapes and
+# connectors come from the host diagram API; positions stay explicit.
+out = ARGV.len() > 0 ? ARGV[0] : "build/flowchart-order-approval.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(960, 600, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "Order approval", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "two decision gates: inventory, then payment", "#9db4c8");
+
+# main spine
+let start = scene.box(480.0, 120.0, 170.0, 44.0, "order received", "#1e3247", "#f5c16c", 22.0, 15.0);
+let validate = scene.box(480.0, 196.0, 210.0, 56.0, "validate order details", "#1e3247", "#4a6a88", 8.0, 15.0);
+let stock = scene.diamond(480.0, 290.0, 200.0, 94.0, "in stock?", "#1e3247", "#4a6a88", 14.0);
+
+# yes: approve, then payment gate
+let approve = scene.box(730.0, 235.0, 170.0, 56.0, "approve order", "#1e3247", "#4a6a88", 8.0, 15.0);
+let payment = scene.diamond(730.0, 378.0, 200.0, 94.0, "payment ok?", "#1e3247", "#4a6a88", 14.0);
+
+# no: backorder, park on hold
+let backorder = scene.box(220.0, 235.0, 170.0, 56.0, "backorder items", "#1e3247", "#4a6a88", 8.0, 15.0);
+let hold = scene.box(220.0, 332.0, 150.0, 42.0, "on hold", "#1e3247", "#f5c16c", 21.0, 15.0);
+
+# payment ok: fulfill and ship
+let fulfill = scene.box(480.0, 441.0, 170.0, 56.0, "fulfill order", "#1e3247", "#4a6a88", 8.0, 15.0);
+let shipped = scene.box(480.0, 522.0, 140.0, 42.0, "shipped", "#1e3247", "#f5c16c", 21.0, 15.0);
+
+# payment fails: reject and close
+let reject = scene.box(885.0, 441.0, 130.0, 56.0, "reject order", "#1e3247", "#4a6a88", 8.0, 15.0);
+let closed = scene.box(885.0, 522.0, 150.0, 42.0, "order closed", "#1e3247", "#f5c16c", 21.0, 15.0);
+
+scene.connector(start, "s", validate, "n", "straight", "none", "arrow", "none", "#f5c16c", 2.5, "", 0.5, 0.0, 0.0);
+scene.connector(validate, "s", stock, "n", "straight", "none", "arrow", "none", "#f5c16c", 2.5, "", 0.5, 0.0, 0.0);
+scene.connector(stock, "e", approve, "w", "elbow", "none", "arrow", "none", "#6fbdb4", 2.5, "yes", 0.5, 0.0, -12.0);
+scene.connector(approve, "s", payment, "n", "straight", "none", "arrow", "none", "#f5c16c", 2.5, "", 0.5, 0.0, 0.0);
+scene.connector(stock, "w", backorder, "e", "elbow", "none", "arrow", "none", "#d9897a", 2.5, "no", 0.25, 0.0, -12.0);
+scene.connector(backorder, "s", hold, "n", "straight", "none", "arrow", "none", "#d9897a", 2.5, "", 0.5, 0.0, 0.0);
+scene.connector(payment, "w", fulfill, "n", "elbow", "none", "arrow", "none", "#6fbdb4", 2.5, "yes", 0.5, 0.0, -12.0);
+scene.connector(fulfill, "s", shipped, "n", "straight", "none", "arrow", "none", "#6fbdb4", 2.5, "", 0.5, 0.0, 0.0);
+scene.connector(payment, "e", reject, "n", "elbow", "none", "arrow", "none", "#d9897a", 2.5, "no", 0.75, 0.0, -12.0);
+scene.connector(reject, "s", closed, "n", "straight", "none", "arrow", "none", "#d9897a", 2.5, "", 0.5, 0.0, 0.0);
+
+scene.render_png("build/rendered/flowchart-order-approval.png", 960, 600, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/flowchart-order-approval.png", "images/flowchart-order-approval.png");
+println("wrote images/flowchart-order-approval.png");

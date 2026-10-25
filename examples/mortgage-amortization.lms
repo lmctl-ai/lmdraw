@@ -1,0 +1,138 @@
+# A 30-year fixed mortgage: where every payment goes.
+# $400,000 at 6.5 % APR, monthly payments. lmscript runs the amortization
+# schedule month by month (payment = P r / (1 - (1 + r)^-n)), sums principal and
+# interest per year and finds the year in which principal finally overtakes
+# interest; lmdraw draws the yearly stacked bars, the remaining balance and a
+# what-if: paying $300 extra every month.
+# Known answers: payment $2,528.27; total interest $510,178; crossover in year 20 (yearly totals).
+# Writes images/mortgage-amortization.png (900x600).
+out = ARGV.len() > 0 ? ARGV[0] : "build/mortgage-amortization.dslb";
+mkdir("images");
+mkdir("build");
+
+PRINCIPAL = 400000.0;
+APR = 0.065;
+YEARS = 30;
+EXTRA = 300.0;
+r = APR / 12.0;
+n = YEARS * 12;
+payment = PRINCIPAL * r / (1.0 - pow(1.0 + r, -n));
+
+fn money(x) {            # $1,234,567 formatting
+  let s = str(round(x));
+  let o = "";
+  let c = 0;
+  for (i in range(0, s.len())) {
+    let k = s.len() - 1 - i;
+    o = char_at(s, k) + o;
+    c = c + 1;
+    if (c % 3 == 0 && k > 0) { o = "," + o; }
+  }
+  return "$" + o;
+}
+# Run a schedule; returns [months, total interest, yearly interest list, yearly principal list, year-end balances].
+fn schedule(extra) {
+  let bal = PRINCIPAL; let months = 0; let total_i = 0.0;
+  let yi = []; let yp = []; let yb = [];
+  let acc_i = 0.0; let acc_p = 0.0;
+  while (bal > 0.005 && months < n) {
+    let interest = bal * r;
+    let pay_p = min(payment + extra - interest, bal);
+    bal = bal - pay_p;
+    acc_i = acc_i + interest; acc_p = acc_p + pay_p; total_i = total_i + interest;
+    months = months + 1;
+    if (months % 12 == 0 || bal <= 0.005) { push(yi, acc_i); push(yp, acc_p); push(yb, bal); acc_i = 0.0; acc_p = 0.0; }
+  }
+  return [months, total_i, yi, yp, yb];
+}
+base = schedule(0.0);
+fast = schedule(EXTRA);
+yi = base[2]; yp = base[3]; yb = base[4];
+cross = 0;
+for (y in range(0, yi.len())) { if (cross == 0 && yp[y] > yi[y]) { cross = y + 1; } }
+println(sprintf("payment %.2f per month; total interest %.0f; principal overtakes interest in year %d", payment, base[1], cross));
+println(sprintf("with $%.0f extra: paid off after %d months, interest %.0f (saves %.0f)", EXTRA, fast[0], fast[1], base[1] - fast[1]));
+
+# Plot geometry: x = 90 + 17 px per year; y = 500 - 10.67 px per $1k (yearly bars).
+fn bx(y) { return 92.0 + y * 17.0; }
+fn by(k) { return 500.0 - k * 384.0 / 36.0; }
+int_d = ""; pri_d = ""; bal_pts = "90 " + str(500.0 - 400.0 * 0.96);
+for (y in range(0, yi.len())) {
+  let x = bx(y);
+  let hi = yi[y] / 1000.0; let hp = yp[y] / 1000.0;
+  int_d = int_d + "M " + str(x) + " 500 L " + str(x) + " " + str(by(hi)) + " L " + str(x + 13.0) + " " + str(by(hi)) + " L " + str(x + 13.0) + " 500 Z ";
+  pri_d = pri_d + "M " + str(x) + " " + str(by(hi)) + " L " + str(x) + " " + str(by(hi + hp)) + " L " + str(x + 13.0) + " " + str(by(hi + hp)) + " L " + str(x + 13.0) + " " + str(by(hi)) + " Z ";
+  bal_pts = bal_pts + " " + str(90.0 + 17.0 * (y + 1)) + " " + str(500.0 - yb[y] / 1000.0 * 0.96);
+}
+cross_x = str(bx(cross - 1) + 6.5);
+cross_lbl_x = str(bx(cross - 1) + 6.5);
+pay_txt = sprintf("$%.2f", payment);
+tot_txt = money(payment * n);
+int_txt = money(base[1]);
+cross_txt = sprintf("year %d", cross);
+fast_txt = sprintf("Pay %s more each month and the loan ends after %d years %d months, saving %s of interest.", money(EXTRA), floor(fast[0] / 12), fast[0] % 12, money(base[1] - fast[1]));
+first_txt = sprintf("Year 1: %s interest, %s principal", money(yi[0]), money(yp[0]));
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 600, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Where a 30-year mortgage payment goes", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "$400,000 at 6.5 % APR: the same payment every month, but for 19 years most of it is interest", "#9fb3c8");
+
+scene.axes(90.0, 116.0, 510.0, 384.0, 0.0, 30.0, 0.0, 36.0, 6, "#7f97ad");
+scene.text(345.0, 548.0, 13.0, "year of the loan", "#9fb3c8").set_attr("text-anchor", "middle");
+let yl = scene.text(32.0, 308.0, 13.0, "paid per year (thousand $)", "#9fb3c8");
+yl.set_attr("text-anchor", "middle");
+yl.set_attr("transform", "rotate(-90 32 308)");
+# Right axis: remaining balance, 0 to 400 thousand $ (0.96 px per $1k).
+scene.line(600.0, 116.0, 600.0, 500.0, "#7f97ad", 1.0);
+for (k in range(0, 5)) {
+  let y = 500.0 - float(k) * 96.0;
+  scene.line(600.0, y, 605.0, y, "#7f97ad", 1.0);
+  scene.text(610.0, y + 4.0, 13.0, str(k * 100), "#b49cf0");
+}
+let rl = scene.text(660.0, 308.0, 13.0, "balance left (thousand $)", "#b49cf0");
+rl.set_attr("text-anchor", "middle");
+rl.set_attr("transform", "rotate(90 660 308)");
+
+scene.path(${int_d}, "#f08a6c", "none", 1.0);
+scene.path(${pri_d}, "#6fbdb4", "none", 1.0);
+scene.polyline(${bal_pts}, "#b49cf0", 2.5);
+let cl = scene.line(0.0, 150.0, 0.0, 500.0, "#f5c16c", 1.5);
+cl.set_attr("x1", ${cross_x});
+cl.set_attr("x2", ${cross_x});
+cl.set_attr("stroke-dasharray", "4 4");
+scene.text(0.0, 162.0, 12.0, "principal overtakes interest", "#f5c16c").set_attr("x", ${cross_lbl_x}).set_attr("text-anchor", "end").set_attr("transform", "translate(-6 0)");
+
+# Legend.
+scene.rect(110.0, 128.0, 14.0, 14.0, "#f08a6c");
+scene.text(130.0, 140.0, 13.0, "interest", "#e6edf3");
+scene.rect(204.0, 128.0, 14.0, 14.0, "#6fbdb4");
+scene.text(224.0, 140.0, 13.0, "principal", "#e6edf3");
+scene.line(306.0, 135.0, 330.0, 135.0, "#b49cf0", 2.5);
+scene.text(336.0, 140.0, 13.0, "balance", "#e6edf3");
+
+let panel = scene.rect(686.0, 104.0, 196.0, 274.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(700.0, 130.0, 14.0, "Amortization", "#e6edf3").set_attr("font-weight", "700");
+scene.text(700.0, 156.0, 12.0, "monthly payment", "#9fb3c8");
+scene.text(700.0, 178.0, 18.0, ${pay_txt}, "#e6edf3").set_attr("font-weight", "700");
+scene.text(700.0, 204.0, 12.0, "paid over 30 years", "#9fb3c8");
+scene.text(700.0, 224.0, 15.0, ${tot_txt}, "#e6edf3");
+scene.text(700.0, 250.0, 12.0, "of which interest", "#9fb3c8");
+scene.text(700.0, 270.0, 15.0, ${int_txt}, "#f08a6c");
+scene.text(700.0, 296.0, 12.0, "principal > interest from", "#9fb3c8");
+scene.text(700.0, 316.0, 15.0, ${cross_txt}, "#f5c16c");
+scene.text(700.0, 342.0, 11.0, ${first_txt}, "#9fb3c8", 172.0);
+let wi = scene.rect(686.0, 392.0, 196.0, 110.0, "#1b1a26");
+wi.set_attr("stroke", "#4b3f6b");
+wi.set_attr("rx", "8");
+scene.text(700.0, 418.0, 14.0, "What if: +$300/month", "#b49cf0").set_attr("font-weight", "700");
+scene.text(700.0, 440.0, 12.0, ${fast_txt}, "#c9d6e2", 172.0);
+scene.render_png("images/mortgage-amortization.png", 900, 600, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/mortgage-amortization.png");

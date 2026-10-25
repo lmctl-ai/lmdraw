@@ -1,0 +1,143 @@
+# RC low-pass filter: schematic and Bode plot.
+# R = 1 kOhm, C = 100 nF. lmscript evaluates H(f) = 1 / (1 + j f/fc) over five
+# decades (its own ln and atan, since lmscript has no transcendental built-ins),
+# finds the -3 dB corner and the roll-off slope, and compares two buffered
+# stages in cascade; lmdraw draws the schematic and log-frequency Bode plots.
+# Known answers: fc = 1/(2 pi R C) = 1591.5 Hz; -3.01 dB and -45 deg at fc;
+# -20 dB/decade (one stage) and -40 dB/decade (two stages) far above fc.
+# Writes images/rc-lowpass.png (900x700).
+out = ARGV.len() > 0 ? ARGV[0] : "build/rc-lowpass.dslb";
+mkdir("images");
+mkdir("build");
+
+PI = 3.141592653589793;
+RES = 1000.0;
+CAP = 0.0000001;
+FC = 1.0 / (2.0 * PI * RES * CAP);
+LN10 = 2.302585092994046;
+fn ln_small(m) { let y = (m - 1.0) / (m + 1.0); let term = y; let total = 0.0; for (k in range(0, 80)) { total = total + term / (2 * k + 1); term = term * y * y; } return 2.0 * total; }
+fn log10(x) { let k = 0; let m = x; while (m >= 10.0) { m = m / 10.0; k = k + 1; } while (m < 1.0) { m = m * 10.0; k = k - 1; } return k + ln_small(m) / LN10; }
+fn atan(x) {
+  if (x < 0.0) { return -atan(-x); }
+  if (x > 1.0) { return PI / 2.0 - atan(1.0 / x); }
+  let z = x / (1.0 + sqrt(1.0 + x * x));          # halve the angle once: |z| <= 0.415
+  let term = z; let total = 0.0;
+  for (k in range(0, 60)) { total = total + term / (2 * k + 1); term = -term * z * z; }
+  return 2.0 * total;
+}
+fn mag_db(f, stages) { return -10.0 * stages * log10(1.0 + (f / FC) * (f / FC)); }
+fn phase_deg(f, stages) { return -stages * atan(f / FC) * 180.0 / PI; }
+slope1 = mag_db(1000000.0, 1) - mag_db(100000.0, 1);
+slope2 = mag_db(1000000.0, 2) - mag_db(100000.0, 2);
+println(sprintf("fc = %.1f Hz; |H(fc)| = %.2f dB, phase %.1f deg; slope %.1f dB/decade (1 stage), %.1f dB/decade (2 stages)",
+  FC, mag_db(FC, 1), phase_deg(FC, 1), slope1, slope2));
+
+# Plot mapping: f = 10 Hz .. 1 MHz on x = 90..570 (96 px per decade).
+fn fx(f) { return 90.0 + (log10(f) - 1.0) * 96.0; }
+fn my(db) { return 340.0 + (0.0 - db) / 60.0 * 150.0; }     # 0..-60 dB on y = 340..490
+fn phy(deg) { return 534.0 + (0.0 - deg) / 180.0 * 120.0; }  # 0..-180 deg on y = 534..654
+m1 = ""; m2 = ""; p1 = ""; p2 = "";
+for (i in range(0, 101)) {
+  let f = pow(10.0, 1.0 + 5.0 * i / 100.0);
+  let x = str(fx(f));
+  if (mag_db(f, 1) >= -60.0) { m1 = m1 + x + " " + str(my(mag_db(f, 1))) + " "; }
+  if (mag_db(f, 2) >= -60.0) { m2 = m2 + x + " " + str(my(mag_db(f, 2))) + " "; }
+  p1 = p1 + x + " " + str(phy(phase_deg(f, 1))) + " ";
+  p2 = p2 + x + " " + str(phy(phase_deg(f, 2))) + " ";
+}
+asym = str(fx(10.0)) + " " + str(my(0.0)) + " " + str(fx(FC)) + " " + str(my(0.0)) + " " + str(fx(1000000.0)) + " " + str(my(-20.0 * log10(1000000.0 / FC)));
+fc_x = str(fx(FC));
+fc_y = str(my(-3.0103));
+fc_py = str(phy(-45.0));
+fc_txt = sprintf("%.0f Hz", FC);
+fc_lbl = sprintf("fc = %.0f Hz, −3.0 dB", FC);
+res_txt = sprintf("%.1f Hz\n%.2f dB\n%.1f°\n%.1f dB/dec\n%.1f dB/dec", FC, mag_db(FC, 1), phase_deg(FC, 1), slope1, slope2);
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 700, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "RC low-pass filter: schematic to Bode plot", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "R = 1 kΩ, C = 100 nF. Below the corner frequency the signal passes; above it, each decade costs 20 dB", "#9fb3c8");
+
+# Schematic.
+let wire = "#c9d6e2";
+scene.circle(90.0, 210.0, 22.0, "none").set_attr("stroke", wire).set_attr("stroke-width", "2");
+scene.path("M 78 210 Q 84 198 90 210 Q 96 222 102 210", "none", wire, 2.0);
+scene.polyline("90 188 90 140 150 140", wire, 2.0);
+scene.polyline("150 140 158 128 174 152 190 128 206 152 222 128 238 152 246 140 250 140", "#f5c16c", 2.5);
+scene.polyline("250 140 470 140", wire, 2.0);
+scene.polyline("330 140 330 196", wire, 2.0);
+scene.line(306.0, 196.0, 354.0, 196.0, "#6fbdb4", 3.5);
+scene.line(306.0, 208.0, 354.0, 208.0, "#6fbdb4", 3.5);
+scene.polyline("330 208 330 270", wire, 2.0);
+scene.polyline("90 232 90 270 470 270", wire, 2.0);
+scene.circle(330.0, 140.0, 4.0, wire);
+scene.circle(330.0, 270.0, 4.0, wire);
+scene.circle(474.0, 140.0, 4.5, "#0f1720").set_attr("stroke", wire).set_attr("stroke-width", "2");
+scene.circle(474.0, 270.0, 4.5, "#0f1720").set_attr("stroke", wire).set_attr("stroke-width", "2");
+scene.polyline("200 270 200 282", wire, 2.0);
+scene.line(186.0, 282.0, 214.0, 282.0, wire, 2.0);
+scene.line(191.0, 288.0, 209.0, 288.0, wire, 2.0);
+scene.line(196.0, 294.0, 204.0, 294.0, wire, 2.0);
+scene.text(198.0, 118.0, 14.0, "R = 1 kΩ", "#f5c16c").set_attr("text-anchor", "middle");
+scene.text(364.0, 207.0, 14.0, "C = 100 nF", "#6fbdb4");
+scene.text(40.0, 215.0, 14.0, "Vin", "#e6edf3");
+scene.text(486.0, 210.0, 14.0, "Vout", "#e6edf3");
+scene.line(474.0, 152.0, 474.0, 192.0, "#5b7690", 1.0).set_attr("marker-start", "arrow");
+scene.line(474.0, 218.0, 474.0, 258.0, "#5b7690", 1.0).set_attr("marker-end", "arrow");
+
+# Magnitude plot.
+scene.text(40.0, 326.0, 13.0, "gain (dB)", "#9fb3c8");
+for (k in range(0, 6)) {
+  let x = 90.0 + float(k) * 96.0;
+  scene.line(x, 340.0, x, 490.0, "#223344", 1.0);
+  scene.line(x, 534.0, x, 654.0, "#223344", 1.0);
+}
+for (k in range(0, 4)) {
+  let y = 340.0 + float(k) * 50.0;
+  scene.line(90.0, y, 570.0, y, "#223344", 1.0);
+}
+scene.log_axes(90.0, 340.0, 480.0, 150.0, 10.0, 1000000.0, -60.0, 0.0, 3, "#7f97ad");
+scene.polyline(${asym}, "#5b7690", 1.2).set_attr("stroke-dasharray", "5 4");
+scene.polyline(${m2}, "#b49cf0", 2.2).set_attr("stroke-dasharray", "8 4");
+scene.polyline(${m1}, "#f5c16c", 3.0);
+let fcl = scene.line(0.0, 340.0, 0.0, 654.0, "#f08a6c", 1.2);
+fcl.set_attr("x1", ${fc_x});
+fcl.set_attr("x2", ${fc_x});
+fcl.set_attr("stroke-dasharray", "3 4");
+scene.circle(0.0, 0.0, 5.0, "#f08a6c").set_attr("cx", ${fc_x}).set_attr("cy", ${fc_y});
+scene.text(0.0, 0.0, 12.0, ${fc_lbl}, "#f08a6c").set_attr("x", ${fc_x}).set_attr("y", ${fc_y}).set_attr("transform", "translate(10 -8)");
+scene.legend(102.0, 404.0, "1 stage (−20 dB/dec)\n2 stages (−40 dB/dec)\nasymptote", "#f5c16c,#b49cf0,#5b7690", "#e6edf3");
+
+# Phase plot.
+scene.text(40.0, 526.0, 13.0, "phase (degrees)", "#9fb3c8");
+for (k in range(0, 5)) {
+  let y = 534.0 + float(k) * 30.0;
+  scene.line(90.0, y, 570.0, y, "#223344", 1.0);
+}
+scene.log_axes(90.0, 534.0, 480.0, 120.0, 10.0, 1000000.0, -180.0, 0.0, 4, "#7f97ad");
+scene.polyline(${p2}, "#b49cf0", 2.2).set_attr("stroke-dasharray", "8 4");
+scene.polyline(${p1}, "#f5c16c", 3.0);
+scene.circle(0.0, 0.0, 5.0, "#f08a6c").set_attr("cx", ${fc_x}).set_attr("cy", ${fc_py});
+scene.text(0.0, 0.0, 12.0, "−45° at fc", "#f08a6c").set_attr("x", ${fc_x}).set_attr("y", ${fc_py}).set_attr("transform", "translate(10 -8)");
+scene.text(330.0, 694.0, 12.0, "frequency f (Hz)", "#9fb3c8").set_attr("text-anchor", "middle");
+
+# Results.
+let panel = scene.rect(620.0, 104.0, 262.0, 240.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(636.0, 130.0, 14.0, "Computed response", "#e6edf3").set_attr("font-weight", "700");
+scene.text(636.0, 154.0, 12.5, "corner fc = 1 / (2πRC)\ngain at fc (1 / √2)\nphase at fc\nslope, 1 stage\nslope, 2 stages", "#9fb3c8");
+scene.text(866.0, 154.0, 12.5, ${res_txt}, "#e6edf3").set_attr("text-anchor", "end");
+scene.text(636.0, 252.0, 12.0, "At fc the capacitor's reactance equals R: |H(fc)| = 1/√2 ≈ −3.01 dB (half power) and the output lags by 45°.", "#9fb3c8", 232.0);
+let wi = scene.rect(620.0, 364.0, 262.0, 150.0, "#1b1a26");
+wi.set_attr("stroke", "#4b3f6b");
+wi.set_attr("rx", "8");
+scene.text(636.0, 390.0, 14.0, "What if: two stages", "#b49cf0").set_attr("font-weight", "700");
+scene.text(636.0, 412.0, 12.0, "Two identical RC sections with a buffer between them square the response: −6 dB at fc, twice the slope and up to −180° of phase. Sharper, at the cost of more lag.", "#c9d6e2", 232.0);
+scene.render_png("images/rc-lowpass.png", 900, 700, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/rc-lowpass.png");

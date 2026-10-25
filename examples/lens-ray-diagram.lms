@@ -1,0 +1,133 @@
+# Thin converging lens, f = 10 cm: where does the image form?
+# Two cases a physics student meets first: an object at 30 cm (beyond 2F) gives a
+# real, inverted, smaller image; the same lens used as a magnifier (object at
+# 6 cm, inside F) gives a virtual, upright, larger image. lmscript solves the
+# thin-lens equation 1/f = 1/do + 1/di and traces the three principal rays;
+# lmdraw draws both ray diagrams to scale (11 px per cm).
+# Known answers: di = 15 cm, m = -0.5; magnifier di = -15 cm, m = +2.5.
+# Writes images/lens-ray-diagram.png (900x640).
+out = ARGV.len() > 0 ? ARGV[0] : "build/lens-ray-diagram.dslb";
+mkdir("images");
+mkdir("build");
+
+F = 10.0;       # focal length, cm
+S = 11.0;       # px per cm
+L = 380.0;      # lens x on the canvas
+fn image_distance(d) { return 1.0 / (1.0 / F - 1.0 / d); }
+fn pt(x, y) { return str(x) + " " + str(y) + " "; }
+
+# Case 1: real image. Object 30 cm left of the lens, 6 cm tall; axis at y = 236.
+A1 = 236.0; DO1 = 30.0; H1 = 6.0;
+DI1 = image_distance(DO1);
+M1 = -DI1 / DO1;
+tip1x = L - DO1 * S; tip1y = A1 - H1 * S;
+img1x = L + DI1 * S; img1y = A1 - M1 * H1 * S;
+XE = 640.0;     # rays continue to here
+ray_a1 = pt(tip1x, tip1y) + pt(L, tip1y) + pt(XE, tip1y + (XE - L) * H1 / F);
+ray_b1 = pt(tip1x, tip1y) + pt(XE, A1 + (XE - L) * H1 / DO1);
+lens_y3 = A1 + H1 * S * F / (DO1 - F);
+ray_c1 = pt(tip1x, tip1y) + pt(L, lens_y3) + pt(XE, lens_y3);
+obj1 = pt(tip1x, A1) + pt(tip1x, tip1y);
+img1 = pt(img1x, A1) + pt(img1x, img1y);
+
+# Case 2: magnifier. Object 6 cm left, 3 cm tall; axis at y = 510.
+A2 = 510.0; DO2 = 6.0; H2 = 3.0;
+DI2 = image_distance(DO2);
+M2 = -DI2 / DO2;
+tip2x = L - DO2 * S; tip2y = A2 - H2 * S;
+img2x = L + DI2 * S; img2y = A2 - M2 * H2 * S;
+XE2 = 600.0;
+ray_a2 = pt(tip2x, tip2y) + pt(L, tip2y) + pt(XE2, tip2y + (XE2 - L) * H2 / F);
+ray_b2 = pt(tip2x, tip2y) + pt(XE2, A2 + (XE2 - L) * H2 / DO2);
+virt_a2 = pt(L, tip2y) + pt(img2x, img2y);
+virt_b2 = pt(tip2x, tip2y) + pt(img2x, img2y);
+obj2 = pt(tip2x, A2) + pt(tip2x, tip2y);
+img2 = pt(img2x, A2) + pt(img2x, img2y);
+println(sprintf("object at %.0f cm: image at %.2f cm, magnification %.2f", DO1, DI1, M1));
+println(sprintf("object at %.0f cm: image at %.2f cm (virtual), magnification %.2f", DO2, DI2, M2));
+
+# Focal-point ticks on both axes: F and 2F on either side.
+ticks = "";
+for (a in [A1, A2]) {
+  for (k in [-2.0, -1.0, 1.0, 2.0]) { ticks = ticks + "M " + str(L + k * F * S) + " " + str(a - 5.0) + " L " + str(L + k * F * S) + " " + str(a + 5.0) + " "; }
+}
+fx = [str(L - 2.0 * F * S), str(L - F * S), str(L + F * S), str(L + 2.0 * F * S)];
+res1 = sprintf("do = %.0f cm, f = %.0f cm\n1/di = 1/f − 1/do\ndi = %.1f cm\nm = −di/do = %.2f", DO1, F, DI1, M1);
+res2 = sprintf("do = %.0f cm, f = %.0f cm\n1/di = 1/f − 1/do\ndi = %.1f cm\nm = −di/do = +%.2f", DO2, F, DI2, M2);
+img1_lbl = [str(img1x), str(img1y + 62.0)];
+img2_lbl = [str(img2x - 8.0), str(img2y - 6.0)];
+obj1_lbl = [str(tip1x), str(tip1y - 10.0)];
+obj2_lbl = [str(tip2x + 6.0), str(tip2y - 8.0)];
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 640, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "One lens, two images: real or virtual", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Thin converging lens, f = 10 cm, drawn to scale with the three principal rays", "#9fb3c8");
+
+# Lens outlines (biconvex) and optical axes.
+scene.line(30.0, 236.0, 650.0, 236.0, "#3d556c", 1.2);
+scene.line(30.0, 510.0, 650.0, 510.0, "#3d556c", 1.2);
+let lens1 = scene.path("M 380 150 Q 398 236 380 322 Q 362 236 380 150 Z", "#7fa8d0", "#a9c6e0", 1.2);
+lens1.set_attr("fill-opacity", "0.25");
+let lens2 = scene.path("M 380 424 Q 398 510 380 596 Q 362 510 380 424 Z", "#7fa8d0", "#a9c6e0", 1.2);
+lens2.set_attr("fill-opacity", "0.25");
+scene.path(${ticks}, "none", "#9fb3c8", 1.5);
+scene.text(0.0, 256.0, 12.0, "2F", "#9fb3c8").set_attr("x", ${fx[0]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 256.0, 12.0, "F", "#9fb3c8").set_attr("x", ${fx[1]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 256.0, 12.0, "F′", "#9fb3c8").set_attr("x", ${fx[2]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 256.0, 12.0, "2F′", "#9fb3c8").set_attr("x", ${fx[3]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 530.0, 12.0, "2F", "#9fb3c8").set_attr("x", ${fx[0]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 530.0, 12.0, "F", "#9fb3c8").set_attr("x", ${fx[1]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 530.0, 12.0, "F′", "#9fb3c8").set_attr("x", ${fx[2]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 530.0, 12.0, "2F′", "#9fb3c8").set_attr("x", ${fx[3]}).set_attr("text-anchor", "middle");
+scene.text(40.0, 120.0, 15.0, "Object beyond 2F: real, inverted, smaller", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 400.0, 15.0, "Object inside F (magnifying glass): virtual, upright, larger", "#e6edf3").set_attr("font-weight", "700");
+
+# Case 1 rays.
+scene.polyline(${ray_a1}, "#f5c16c", 1.8);
+scene.polyline(${ray_b1}, "#6fbdb4", 1.8);
+scene.polyline(${ray_c1}, "#f08a6c", 1.8);
+scene.polyline(${obj1}, "#e6edf3", 3.5).set_attr("marker-end", "arrow");
+scene.polyline(${img1}, "#b49cf0", 3.5).set_attr("marker-end", "arrow");
+scene.text(0.0, 0.0, 12.0, "object", "#e6edf3").set_attr("x", ${obj1_lbl[0]}).set_attr("y", ${obj1_lbl[1]}).set_attr("text-anchor", "middle");
+scene.text(0.0, 0.0, 12.0, "real image", "#b49cf0").set_attr("x", ${img1_lbl[0]}).set_attr("y", ${img1_lbl[1]}).set_attr("text-anchor", "middle");
+
+# Case 2 rays: real rays diverge; dashed back-extensions meet at the virtual image.
+scene.polyline(${ray_a2}, "#f5c16c", 1.8);
+scene.polyline(${ray_b2}, "#6fbdb4", 1.8);
+scene.polyline(${virt_a2}, "#f5c16c", 1.2).set_attr("stroke-dasharray", "5 5");
+scene.polyline(${virt_b2}, "#6fbdb4", 1.2).set_attr("stroke-dasharray", "5 5");
+scene.polyline(${obj2}, "#e6edf3", 3.5).set_attr("marker-end", "arrow");
+let vimg = scene.polyline(${img2}, "#b49cf0", 3.5);
+vimg.set_attr("marker-end", "arrow");
+vimg.set_attr("stroke-dasharray", "7 4");
+scene.text(0.0, 0.0, 12.0, "object", "#e6edf3").set_attr("x", ${obj2_lbl[0]}).set_attr("y", ${obj2_lbl[1]});
+scene.text(0.0, 0.0, 12.0, "virtual image", "#b49cf0").set_attr("x", ${img2_lbl[0]}).set_attr("y", ${img2_lbl[1]}).set_attr("text-anchor", "end");
+scene.text(470.0, 452.0, 12.0, "your eye traces the rays back", "#9fb3c8");
+
+# Ray legend and results.
+let panel = scene.rect(672.0, 104.0, 210.0, 250.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(688.0, 130.0, 14.0, "Lens equation", "#e6edf3").set_attr("font-weight", "700");
+scene.text(688.0, 154.0, 13.0, ${res1}, "#c9d6e2");
+scene.line(688.0, 244.0, 712.0, 244.0, "#f5c16c", 2.0);
+scene.text(720.0, 248.0, 12.0, "parallel, then through F′", "#9fb3c8");
+scene.line(688.0, 266.0, 712.0, 266.0, "#6fbdb4", 2.0);
+scene.text(720.0, 270.0, 12.0, "through the centre", "#9fb3c8");
+scene.line(688.0, 288.0, 712.0, 288.0, "#f08a6c", 2.0);
+scene.text(720.0, 292.0, 12.0, "through F, then parallel", "#9fb3c8");
+scene.text(688.0, 322.0, 12.0, "All three cross at the image.", "#9fb3c8");
+let panel2 = scene.rect(672.0, 384.0, 210.0, 200.0, "#16222e");
+panel2.set_attr("stroke", "#2c4156");
+panel2.set_attr("rx", "8");
+scene.text(688.0, 410.0, 14.0, "Same equation", "#e6edf3").set_attr("font-weight", "700");
+scene.text(688.0, 434.0, 13.0, ${res2}, "#c9d6e2");
+scene.text(688.0, 524.0, 12.0, "A negative di means the image is on the object's side: it cannot be caught on a screen.", "#9fb3c8", 180.0);
+scene.render_png("images/lens-ray-diagram.png", 900, 640, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/lens-ray-diagram.png");

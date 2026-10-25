@@ -1,0 +1,61 @@
+# ETL pipeline: two source datastores drawn as cylinders, an Extract box,
+# a labeled cluster box grouping three transform nodes, a Load box and a
+# warehouse cylinder. Extract->transform->load edges are dashed, the
+# warehouse sync edge is bidirectional (marker-start + marker-end), every
+# edge carries a label. Shapes and connectors come from the host diagram
+# API; positions stay explicit.
+out = ARGV.len() > 0 ? ARGV[0] : "build/etl-pipeline.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1000, 540, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "ETL pipeline", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "extract -> transform -> load, with a verify back-channel", "#9db4c8");
+
+# sources
+let crm = scene.cylinder(105.0, 190.0, 130.0, 96.0, "CRM db", "#1e3247", "#6fbdb4", 14.0);
+let orders = scene.cylinder(105.0, 380.0, 130.0, 96.0, "orders db", "#1e3247", "#6fbdb4", 14.0);
+
+# extract
+let extract = scene.box(275.0, 285.0, 80.0, 64.0, "extract", "#1e3247", "#f5c16c", 8.0, 14.0);
+
+# source -> extract (solid fan-in)
+scene.connector(crm, "e", extract, "w", "elbow", "none", "arrow", "none", "#f5c16c", 2.5, "pull", 0.35, 30.0, -14.0);
+scene.connector(orders, "e", extract, "w", "elbow", "none", "arrow", "none", "#f5c16c", 2.5, "", 0.5, 0.0, 0.0);
+
+# transform cluster box
+let cluster = scene.cluster(385.0, 150.0, 290.0, 270.0, "transform cluster", "#131c28", "#6fbdb4", 12.0, 15.0);
+
+# transform nodes inside the cluster
+let clean = scene.box(460.0, 245.0, 110.0, 56.0, "clean", "#1e3247", "#4a6a88", 8.0, 14.0);
+let join = scene.box(610.0, 245.0, 110.0, 56.0, "join", "#1e3247", "#4a6a88", 8.0, 14.0);
+let aggregate = scene.box(535.0, 355.0, 120.0, 56.0, "aggregate", "#1e3247", "#4a6a88", 8.0, 14.0);
+
+# inside-cluster edges (solid)
+scene.connector(clean, "e", join, "w", "straight", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(clean, "s", aggregate, "w", "elbow", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(join, "s", aggregate, "e", "elbow", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+
+# extract -> transform (dashed, labeled)
+scene.connector(extract, "e", clean, "w", "elbow", "none", "arrow", "7 5", "#8fb4d9", 2.5, "raw rows", 0.5, 0.0, -12.0);
+
+# load
+let load = scene.box(785.0, 285.0, 80.0, 64.0, "load", "#1e3247", "#f5c16c", 8.0, 14.0);
+
+# transform -> load (dashed, labeled)
+scene.connector(join, "e", load, "w", "elbow", "none", "arrow", "7 5", "#8fb4d9", 2.5, "clean rows", 0.5, 0.0, -12.0);
+
+# warehouse with a bidirectional verify/sync edge
+let warehouse = scene.cylinder(925.0, 285.0, 110.0, 96.0, "warehouse", "#1e3247", "#6fbdb4", 14.0);
+scene.connector(load, "e", warehouse, "w", "straight", "arrow", "arrow", "none", "#f5c16c", 2.5, "load / verify", 0.5, -10.0, -42.0);
+
+scene.render_png("build/rendered/etl-pipeline.png", 1000, 540, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/etl-pipeline.png", "images/etl-pipeline.png");
+println("wrote images/etl-pipeline.png");

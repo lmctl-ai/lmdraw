@@ -1,0 +1,86 @@
+# Release-plan Gantt: week axis across the top, seven task rows with
+# rounded bars, dependency arrows between bar ends, a dashed summary
+# bracket over the two "build" rows, a milestone diamond for launch and
+# a dashed today line. x(w) = 200 + w * 107.5 for week w in 0..8. Bars
+# are host shapes so dependencies can address their anchors; week
+# mapping and the summary bracket stay in-script.
+out = ARGV.len() > 0 ? ARGV[0] : "build/timeline-gantt.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1100, 640, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "Release plan", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "eight-week Gantt with dependencies and a today line", "#9db4c8");
+
+fn xw(w: float) -> float {
+  return 200.0 + w * 107.5;
+}
+
+fn row_y(i: float) -> float {
+  return 150.0 + i * 62.0;
+}
+
+fn bar(i: float, w1: float, w2: float, color: string) -> Shape {
+  return scene.box((xw(w1) + xw(w2)) / 2.0, row_y(i), xw(w2) - xw(w1), 28.0, "", color, "none", 6.0, 13.0);
+}
+
+fn row_label(i: float, label: string) -> void {
+  scene.text(186.0, row_y(i) + 5.0, 14.0, label, "#dbe7f3").set_attr("text-anchor", "end");
+}
+
+# week grid + labels
+for (w in range(0, 9)) {
+  let g = scene.line(xw(float(w)), 118.0, xw(float(w)), 606.0, "#2c4156", 1.0);
+  g.set_attr("stroke-dasharray", "3 6");
+}
+for (w in range(1, 9)) {
+  scene.text(xw(float(w)) - 53.75, 108.0, 13.0, "W" + str(w), "#9db4c8").set_attr("text-anchor", "middle");
+}
+
+# today line (middle of week 4)
+let today = scene.line(576.0, 118.0, 576.0, 606.0, "#d9897a", 1.8);
+today.set_attr("stroke-dasharray", "8 5");
+scene.text(584.0, 140.0, 12.0, "today", "#d9897a").set_attr("text-anchor", "start");
+
+# task bars
+let req = bar(0.0, 0.0, 2.0, "#6fbdb4");
+let proto = bar(1.0, 1.0, 3.0, "#6fbdb4");
+let api = bar(2.0, 2.0, 5.0, "#f5c16c");
+let ui = bar(3.0, 3.0, 6.0, "#f5c16c");
+let testing = bar(4.0, 5.0, 7.0, "#8fb4d9");
+let docs = bar(5.0, 6.0, 8.0, "#b49cf0");
+row_label(0.0, "Requirements");
+row_label(1.0, "Prototype");
+row_label(2.0, "Build API");
+row_label(3.0, "Build UI");
+row_label(4.0, "Testing");
+row_label(5.0, "Docs");
+row_label(6.0, "Launch");
+
+# summary bracket over the two build rows (dashed)
+let b1 = scene.path("M " + str(xw(2.0)) + " 260.0 V 248.0 H " + str(xw(6.0)) + " V 260.0",
+  "none", "#9db4c8", 1.5);
+b1.set_attr("stroke-dasharray", "5 4");
+scene.text((xw(2.0) + xw(6.0)) / 2.0, 242.0, 12.0, "v1.0 scope", "#9db4c8").set_attr("text-anchor", "middle");
+
+# dependencies (from a bar end to the next bar's start)
+scene.connector(req, "e", proto, "n", "elbow", "none", "arrow", "none", "#9db4c8", 1.8, "", 0.5, 0.0, 0.0);
+scene.connector(req, "e", api, "n", "elbow", "none", "arrow", "none", "#9db4c8", 1.8, "", 0.5, 0.0, 0.0);
+scene.connector(api, "e", ui, "n", "straight", "none", "arrow", "none", "#9db4c8", 1.8, "", 0.5, 0.0, 0.0);
+scene.connector(ui, "s", testing, "n", "straight", "none", "arrow", "none", "#9db4c8", 1.8, "", 0.5, 0.0, 0.0);
+
+# launch milestone
+let launch = scene.diamond(xw(8.0), 522.0, 24.0, 32.0, "", "#f5c16c", "#f5c16c", 13.0);
+scene.connector(testing, "e", launch, "nw", "elbow", "none", "arrow", "none", "#9db4c8", 1.8, "", 0.5, 0.0, 0.0);
+scene.connector(docs, "e", launch, "n", "straight", "none", "arrow", "none", "#9db4c8", 1.8, "", 0.5, 0.0, 0.0);
+
+scene.render_png("build/rendered/timeline-gantt.png", 1100, 640, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/timeline-gantt.png", "images/timeline-gantt.png");
+println("wrote images/timeline-gantt.png");

@@ -1,0 +1,129 @@
+# Hohmann transfer from a 400 km low Earth orbit to geostationary orbit,
+# drawn to scale. lmscript computes the burns with the vis-viva equation
+# v^2 = mu (2/r - 1/a); lmdraw draws the orbits, the transfer ellipse and the
+# two tangential burns, plus a what-if: doing a 28.5 deg plane change (a launch
+# from Cape Canaveral) during the apogee burn.
+# Known answers: dv1 = 2.40 km/s, dv2 = 1.46 km/s, total 3.85 km/s, 5.3 h coast.
+# Writes images/hohmann-transfer.png (900x620).
+out = ARGV.len() > 0 ? ARGV[0] : "build/hohmann-transfer.dslb";
+mkdir("images");
+mkdir("build");
+
+PI = 3.141592653589793;
+MU = 398600.4418;          # Earth GM, km^3/s^2
+RE = 6378.137;             # equatorial radius, km
+r1 = RE + 400.0;           # LEO radius, km
+r2 = 42164.17;             # GEO radius, km
+fn cos_series(x) {         # cosine by Taylor series (lmscript has no trig)
+  let term = 1.0; let total = 1.0;
+  for (k in range(1, 12)) { term = -term * x * x / ((2 * k - 1) * (2 * k)); total = total + term; }
+  return total;
+}
+
+at = (r1 + r2) / 2.0;
+v_leo = sqrt(MU / r1);
+v_peri = sqrt(MU * (2.0 / r1 - 1.0 / at));
+v_apo = sqrt(MU * (2.0 / r2 - 1.0 / at));
+v_geo = sqrt(MU / r2);
+dv1 = v_peri - v_leo;
+dv2 = v_geo - v_apo;
+tof_h = PI * sqrt(at * at * at / MU) / 3600.0;
+inc = 28.5 * PI / 180.0;
+dv2_plane = sqrt(v_apo * v_apo + v_geo * v_geo - 2.0 * v_apo * v_geo * cos_series(inc));
+println(sprintf("dv1 = %.3f km/s, dv2 = %.3f km/s, total = %.3f km/s, coast = %.2f h", dv1, dv2, dv1 + dv2, tof_h));
+println(sprintf("with a 28.5 deg plane change at apogee: dv2 = %.3f km/s, total = %.3f km/s", dv2_plane, dv1 + dv2_plane));
+
+lbl_dv1 = sprintf("Δv₁ = %.2f km/s", dv1);
+lbl_dv2 = sprintf("Δv₂ = %.2f km/s", dv2);
+speeds_l = "circular LEO speed\nperigee speed on ellipse\nburn 1 at perigee\napogee speed on ellipse\ncircular GEO speed\nburn 2 at apogee";
+speeds_r = sprintf("%.2f\n%.2f\n+%.2f\n%.2f\n%.2f\n+%.2f", v_leo, v_peri, dv1, v_apo, v_geo, dv2);
+total_txt = sprintf("%.2f km/s", dv1 + dv2);
+coast_txt = sprintf("%.1f h", tof_h);
+whatif = sprintf("What if the launch site is at 28.5° latitude? Tilting the orbit plane during burn 2 (where the craft is slowest) raises burn 2 from %.2f to %.2f km/s: total %.2f km/s.", dv2, dv2_plane, dv1 + dv2_plane);
+share_txt = sprintf("burn 1 is %.0f%% and burn 2 %.0f%% of the total", 100.0 * dv1 / (dv1 + dv2), 100.0 * dv2 / (dv1 + dv2));
+# Δv budget bar widths (px per km/s)
+w1 = str(dv1 * 52.0);
+w2 = str(dv2 * 52.0);
+x2 = str(612.0 + dv1 * 52.0);
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 620, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Hohmann transfer: LEO to geostationary orbit", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Two tangential burns and half an ellipse, drawn to scale. Speeds from vis-viva: v² = μ (2/r − 1/a)", "#9fb3c8");
+
+# Scale: GEO radius = 250 px.
+let s = 250.0 / 42164.17;
+let cx = 300.0;
+let cy = 350.0;
+let r1 = 6778.137;
+let r2 = 42164.17;
+let a = (r1 + r2) / 2.0;
+let b = sqrt(r1 * r2);
+let ecx = cx - (a - r1) * s;
+
+# Orbits.
+scene.circle(cx, cy, r2 * s, "none").set_attr("stroke", "#f5c16c").set_attr("stroke-width", "2");
+let rest = scene.ellipse(ecx, cy, a * s, b * s, "none");
+rest.set_attr("stroke", "#f08a6c");
+rest.set_attr("stroke-width", "1.2");
+rest.set_attr("stroke-dasharray", "5 6");
+rest.set_attr("opacity", "0.55");
+# Coasting half: perigee (right) up and over to apogee (left), counter-clockwise.
+let px = cx + r1 * s;
+let ax = cx - r2 * s;
+let half = "M " + str(px) + " " + str(cy) + " A " + str(a * s) + " " + str(b * s) + " 0 0 0 " + str(ax) + " " + str(cy);
+scene.path(half, "none", "#f08a6c", 3.0);
+let earth = scene.linear_gradient("earth", 0.0, 0.0, 1.0, 1.0);
+earth.stop(0.0, "#4f9fd8");
+earth.stop(1.0, "#1d4f7a");
+scene.circle(cx, cy, 6378.137 * s, "url(#earth)");
+scene.circle(cx, cy, r1 * s, "none").set_attr("stroke", "#6fbdb4").set_attr("stroke-width", "2");
+
+# Burns: tangential arrows (counter-clockwise motion: up at perigee, down at apogee).
+scene.arrow(px, cy, px, cy - 62.0, "#6fbdb4", 3.0);
+scene.arrow(ax, cy, ax, cy + 54.0, "#f5c16c", 3.0);
+scene.circle(px, cy, 4.0, "#e6edf3");
+scene.circle(ax, cy, 4.0, "#e6edf3");
+scene.text(px + 10.0, cy - 46.0, 14.0, ${lbl_dv1}, "#6fbdb4").set_attr("font-weight", "700");
+scene.text(px + 10.0, cy - 28.0, 12.0, "burn 1 at perigee", "#9fb3c8");
+scene.text(ax + 10.0, cy + 44.0, 14.0, ${lbl_dv2}, "#f5c16c").set_attr("font-weight", "700");
+scene.text(ax + 10.0, cy + 62.0, 12.0, "burn 2 at apogee", "#9fb3c8");
+scene.text(cx, cy + 62.0, 12.0, "LEO 400 km", "#6fbdb4").set_attr("text-anchor", "middle");
+scene.text(cx + 8.0, cy - r2 * s - 10.0, 13.0, "GEO 35 786 km", "#f5c16c").set_attr("text-anchor", "middle");
+scene.text(cx - 40.0, cy - b * s - 14.0, 13.0, "transfer ellipse (coast)", "#f08a6c").set_attr("text-anchor", "middle");
+scene.text(cx, cy + 5.0, 11.0, "Earth", "#e6edf3").set_attr("text-anchor", "middle");
+
+# Budget panel.
+let panel = scene.rect(596.0, 104.0, 284.0, 330.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(612.0, 130.0, 15.0, "Speed budget (km/s)", "#e6edf3").set_attr("font-weight", "700");
+scene.text(612.0, 156.0, 12.5, ${speeds_l}, "#9fb3c8");
+scene.text(864.0, 156.0, 12.5, ${speeds_r}, "#e6edf3").set_attr("text-anchor", "end");
+scene.line(612.0, 268.0, 864.0, 268.0, "#2c4156", 1.0);
+scene.text(612.0, 292.0, 14.0, "total Δv", "#e6edf3");
+scene.text(864.0, 292.0, 18.0, ${total_txt}, "#e6edf3").set_attr("text-anchor", "end").set_attr("font-weight", "700");
+scene.text(612.0, 318.0, 14.0, "coast time (half ellipse)", "#e6edf3");
+scene.text(864.0, 318.0, 14.0, ${coast_txt}, "#e6edf3").set_attr("text-anchor", "end");
+let b1 = scene.rect(612.0, 340.0, 10.0, 18.0, "#6fbdb4");
+b1.set_attr("width", ${w1});
+let b2 = scene.rect(612.0, 340.0, 10.0, 18.0, "#f5c16c");
+b2.set_attr("x", ${x2});
+b2.set_attr("width", ${w2});
+scene.text(612.0, 378.0, 12.0, ${share_txt}, "#9fb3c8");
+scene.text(612.0, 398.0, 12.0, "Most of the cost is leaving LEO; GEO's slow", "#9fb3c8");
+scene.text(612.0, 414.0, 12.0, "circular speed is easy to match at apogee.", "#9fb3c8");
+
+# What-if panel.
+let wi = scene.rect(596.0, 450.0, 284.0, 112.0, "#1b1a26");
+wi.set_attr("stroke", "#4b3f6b");
+wi.set_attr("rx", "8");
+scene.text(612.0, 476.0, 14.0, "What if: plane change", "#b49cf0").set_attr("font-weight", "700");
+scene.text(612.0, 498.0, 12.5, ${whatif}, "#c9d6e2", 256.0);
+scene.render_png("images/hohmann-transfer.png", 900, 620, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/hohmann-transfer.png");

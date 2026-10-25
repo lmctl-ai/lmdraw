@@ -1,0 +1,148 @@
+# Special relativity: Lorentz factor γ = 1 / √(1 − β²) and cosmic-ray muons.
+# As β = v / c → 1, γ → ∞, moving clocks slow down (Δt = γ Δτ ≥ Δτ) and lengths
+# contract along the motion (L = L₀ / γ ≤ L₀). lmscript computes γ(β), the
+# contracted length L / L₀ = √(1 − β²), the relativistic kinetic energy
+# (γ − 1) m₀c² vs classical ½ m₀v², and why atmospheric muons created at 15 km
+# altitude (β = 0.998, τ₀ = 2.197 μs) reach sea level despite c τ₀ ≈ 659 m.
+# Showcases built-in math & Greek glyphs: √, ∝, →, ∞, ≤, ≥, ≈, ≠, γ, β, τ, μ.
+# Writes images/relativity-lorentz.png (900x620).
+out = ARGV.len() > 0 ? ARGV[0] : "build/relativity-lorentz.dslb";
+mkdir("images");
+mkdir("build");
+
+C_MPS = 299792458.0;
+TAU0_S = 0.00000219698;
+ALT_M = 15000.0;
+BETA_MU = 0.998;
+
+fn gamma_of(b) { return 1.0 / sqrt(1.0 - b * b); }
+fn exp_neg(x) {
+  # e^(-x) via (e^(-x/16))^16 Taylor series for accurate muon survival fraction
+  let s = x / 16.0;
+  let term = 1.0;
+  let sum = 1.0;
+  for (k in range(1, 24)) {
+    term = -term * s / k;
+    sum = sum + term;
+  }
+  let r = sum;
+  for (k in range(0, 4)) { r = r * r; }
+  return r;
+}
+
+g_mu = gamma_of(BETA_MU);
+d_class = BETA_MU * C_MPS * TAU0_S;
+d_rel = g_mu * d_class;
+surv_class = exp_neg(ALT_M / d_class);
+surv_rel = exp_neg(ALT_M / d_rel);
+println(sprintf("muon β = %.3f: γ = %.2f, classical mean path %.0f m, relativistic %.0f m, survival %.1f%%",
+  BETA_MU, g_mu, d_class, d_rel, 100.0 * surv_rel));
+assert(g_mu > 15.8 && g_mu < 15.9, "γ(0.998) must be ~15.82");
+assert(surv_rel > 0.22 && surv_rel < 0.24, "relativistic muon survival at 15 km must be ~23%");
+
+# Plot mapping: β = 0 .. 1 on x = 90 .. 560, value = 0 .. 6 on y = 120 .. 520.
+fn px(b) { return 90.0 + b * 470.0; }
+fn py(v) { return 520.0 - v / 6.0 * 400.0; }
+
+gamma_pts = "";
+len_pts = "";
+p_rel_pts = "";
+p_cls_pts = "";
+for (i in range(0, 198)) {
+  let b = i / 200.0;
+  let g = gamma_of(b);
+  let x = str(px(b));
+  if (g <= 6.0) {
+    gamma_pts = gamma_pts + x + " " + str(py(g)) + " ";
+  }
+  len_pts = len_pts + x + " " + str(py(1.0 / g)) + " ";
+  if (g * b <= 6.0) {
+    p_rel_pts = p_rel_pts + x + " " + str(py(g * b)) + " ";
+  }
+  p_cls_pts = p_cls_pts + x + " " + str(py(b)) + " ";
+}
+
+b87 = sqrt(0.75);          # β = √3 / 2 ≈ 0.866 -> γ = 2.0
+x87 = str(px(b87));
+y87_g = str(py(2.0));
+y87_l = str(py(0.5));
+b98 = 0.98;
+g98 = gamma_of(b98);
+x98 = str(px(b98));
+y98_g = str(py(g98));
+
+mu_tbl = sprintf("%.3f c\n%.2f\n%.0f m\n%.1f km\n%.1f%%",
+  BETA_MU, g_mu, d_class, d_rel / 1000.0, 100.0 * surv_rel);
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 620, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Special relativity: γ = 1 / √(1 − β²) as v → c", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "Time dilation Δt = γ Δτ ≥ Δτ, length contraction L = L₀√(1 − β²) ≤ L₀, and momentum p = γm₀v ∝ γβ", "#9fb3c8");
+
+for (k in range(1, 6)) {
+  let y = 520.0 - float(k) / 6.0 * 400.0;
+  scene.line(90.0, y, 560.0, y, "#1e2e3e", 1.0);
+}
+for (k in range(1, 6)) {
+  let x = 90.0 + float(k) / 5.0 * 470.0;
+  scene.line(x, 120.0, x, 520.0, "#1e2e3e", 1.0);
+}
+scene.axes(90.0, 120.0, 470.0, 400.0, 0.0, 1.0, 0.0, 6.0, 6, "#7f97ad");
+scene.text(325.0, 566.0, 13.0, "normalized speed β = v / c  (light barrier at β → 1, γ → ∞)", "#9fb3c8").set_attr("text-anchor", "middle");
+let yl = scene.text(32.0, 320.0, 13.0, "dimensionless factor  (γ,  p / m₀c,  L / L₀)", "#9fb3c8");
+yl.set_attr("text-anchor", "middle");
+yl.set_attr("transform", "rotate(-90 32 320)");
+
+# Light speed vertical asymptote β = 1.
+scene.line(560.0, 120.0, 560.0, 520.0, "#f08a6c", 1.5).set_attr("stroke-dasharray", "5 4");
+scene.text(542.0, 138.0, 12.0, "β = 1 (v = c): γ → ∞", "#f08a6c").set_attr("text-anchor", "end");
+
+# Curves.
+scene.polyline(${p_cls_pts}, "#5b7690", 1.8).set_attr("stroke-dasharray", "6 4");
+scene.polyline(${len_pts}, "#6fbdb4", 2.8);
+scene.polyline(${p_rel_pts}, "#b49cf0", 2.6);
+scene.polyline(${gamma_pts}, "#f5c16c", 3.2);
+
+# Benchmark markers at β = √3/2 ≈ 0.866 (γ = 2, L = ½ L₀) and β = 0.98 (γ ≈ 5.03).
+scene.line(0.0, 120.0, 0.0, 520.0, "#31485f", 1.0).set_attr("x1", ${x87}).set_attr("x2", ${x87}).set_attr("stroke-dasharray", "3 4");
+scene.circle(0.0, 0.0, 5.0, "#f5c16c").set_attr("cx", ${x87}).set_attr("cy", ${y87_g});
+scene.circle(0.0, 0.0, 5.0, "#6fbdb4").set_attr("cx", ${x87}).set_attr("cy", ${y87_l});
+scene.text(0.0, 0.0, 12.0, "β = √3/2 ≈ 0.866 ⇒ γ = 2, L = ½L₀", "#f5c16c").set_attr("x", ${x87}).set_attr("y", ${y87_g}).set_attr("transform", "translate(-12 -10)").set_attr("text-anchor", "end");
+scene.circle(0.0, 0.0, 5.0, "#f5c16c").set_attr("cx", ${x98}).set_attr("cy", ${y98_g});
+scene.text(0.0, 0.0, 12.0, "β = 0.98 ⇒ γ ≈ 5.03", "#f5c16c").set_attr("x", ${x98}).set_attr("y", ${y98_g}).set_attr("transform", "translate(-10 -6)").set_attr("text-anchor", "end");
+
+scene.legend(108.0, 134.0,
+  "Lorentz factor γ = 1 / √(1 − β²) ≥ 1\nrelativistic momentum p / m₀c = γβ\ncontracted length L / L₀ = √(1 − β²) ≤ 1\nNewtonian momentum p / m₀c = β (γ = 1)",
+  "#f5c16c,#b49cf0,#6fbdb4,#5b7690", "#e6edf3");
+
+# Right column: visual length contraction & cosmic-ray muon proof.
+let p1 = scene.rect(596.0, 108.0, 274.0, 212.0, "#16222e");
+p1.set_attr("stroke", "#2c4156");
+p1.set_attr("rx", "8");
+scene.text(612.0, 134.0, 14.0, "Length contraction L = L₀ / γ", "#e6edf3").set_attr("font-weight", "700");
+scene.text(612.0, 154.0, 12.0, "Proper length L₀ shrinks along velocity →", "#9fb3c8");
+scene.text(612.0, 182.0, 12.0, "β = 0.00 (γ = 1.00)", "#c9d6e2");
+scene.rect(742.0, 170.0, 110.0, 14.0, "#6fbdb4").set_attr("rx", "3");
+scene.text(612.0, 210.0, 12.0, "β = 0.87 (γ = 2.00)", "#c9d6e2");
+scene.rect(742.0, 198.0, 55.0, 14.0, "#6fbdb4").set_attr("rx", "3");
+scene.text(612.0, 238.0, 12.0, "β = 0.98 (γ ≈ 5.03)", "#c9d6e2");
+scene.rect(742.0, 226.0, 21.9, 14.0, "#6fbdb4").set_attr("rx", "3");
+scene.text(612.0, 266.0, 12.0, "β = 0.998 (γ ≈ 15.8)", "#c9d6e2");
+scene.rect(742.0, 254.0, 7.0, 14.0, "#f5c16c").set_attr("rx", "2");
+scene.text(612.0, 294.0, 11.5, "Invariant interval: Δs² = c²Δt² − Δx² = c²Δτ²", "#9fb3c8");
+
+let p2 = scene.rect(596.0, 338.0, 274.0, 240.0, "#1b1a26");
+p2.set_attr("stroke", "#4b3f6b");
+p2.set_attr("rx", "8");
+scene.text(612.0, 364.0, 14.0, "Cosmic-ray muons (h = 15 km)", "#b49cf0").set_attr("font-weight", "700");
+scene.text(612.0, 388.0, 12.5, "speed β = v / c\nLorentz factor γ\nclassical path cτ₀\ndilated path γcτ₀\nsea-level survival", "#9fb3c8");
+scene.text(854.0, 388.0, 12.5, ${mu_tbl}, "#e6edf3").set_attr("text-anchor", "end");
+scene.text(612.0, 502.0, 12.0, "Without relativity (γ = 1), e^(−15000/658) ≈ 10⁻¹⁰ of muons would survive 15 km. Time dilation (τ = γτ₀) lets ~23% reach sea-level detectors.", "#c9d6e2", 244.0);
+
+scene.render_png("images/relativity-lorentz.png", 900, 620, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/relativity-lorentz.png");

@@ -1,0 +1,81 @@
+# Org chart on an explicit grid: CEO on row 0, two VPs on row 1, six
+# reports on row 2. Boxes sit on host grid cell anchors; parent-child
+# links are elbow tree connectors (vertical drop, horizontal bus, arrowed
+# vertical stubs); one dotted-line report runs from Platform to the VP of
+# Product. The grid and shapes come from the host diagram API; the tree
+# connector layout stays in-script.
+out = ARGV.len() > 0 ? ARGV[0] : "build/org-chart-grid.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1000, 640, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "Org chart", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "grid-placed boxes, elbow tree connectors, one dotted line", "#9db4c8");
+
+# 7 columns x 3 rows; cell centers are the box anchors
+let slots = scene.grid(45.0, 57.0, 910.0, 320.0, 3, 7, 0.0, 0.0);
+
+fn org_box(slot: Shape, w: float, role: string, name: string, accent: string) -> Shape {
+  let b = scene.box(slot, "c", w, 58.0, "", "#1e3247", accent, 8.0, 14.0);
+  let a = scene.text(b.cx(), b.cy() - 3.0, 14.0, role, "#dbe7f3", w - 14.0);
+  a.set_attr("text-anchor", "middle");
+  a.set_attr("font-weight", "700");
+  let n = scene.text(b.cx(), b.cy() + 16.0, 12.0, name, "#9db4c8", w - 14.0);
+  n.set_attr("text-anchor", "middle");
+  return b;
+}
+
+# row 0: CEO; row 1: VPs; row 2: reports
+let ceo = org_box(slots.cell(3, 0), 220.0, "Chief Executive", "A. Rivera", "#f5c16c");
+let vp_eng = org_box(slots.cell(1, 1), 180.0, "VP Engineering", "J. Chen", "#6fbdb4");
+let vp_prod = org_box(slots.cell(5, 1), 180.0, "VP Product", "L. Gomez", "#6fbdb4");
+let backend = org_box(slots.cell(0, 2), 160.0, "Backend", "M. Okafor", "#4a6a88");
+let platform = org_box(slots.cell(1, 2), 160.0, "Platform", "S. Patel", "#4a6a88");
+let qa = org_box(slots.cell(2, 2), 160.0, "QA", "R. Novak", "#4a6a88");
+let design = org_box(slots.cell(4, 2), 160.0, "Design", "T. Ali", "#4a6a88");
+let growth = org_box(slots.cell(5, 2), 160.0, "Growth", "K. Singh", "#4a6a88");
+let data = org_box(slots.cell(6, 2), 160.0, "Data", "D. Ford", "#4a6a88");
+
+# vertical drop + horizontal bus (no markers)
+fn bus(px: float, py_bottom: float, by: float, x_first: float, x_last: float) -> void {
+  scene.line(px, py_bottom, px, by, "#4a6a88", 2.0);
+  scene.line(x_first, by, x_last, by, "#4a6a88", 2.0);
+}
+
+# arrowed stub from the bus down into a child box
+fn stub(x: float, by: float, child_top: float, dashed: bool) -> void {
+  let dash = "none";
+  if (dashed) { dash = "5 5"; }
+  scene.connector(x, by, x, child_top - 2.0, "straight", "none", "arrow", dash, "#4a6a88", 2.0, "", 0.5, 0.0, 0.0);
+}
+
+# CEO -> VPs
+bus(ceo.cx(), ceo.cy() + 29.0, 195.0, vp_eng.cx(), vp_prod.cx());
+stub(vp_eng.cx(), 195.0, vp_eng.cy() - 29.0, false);
+stub(vp_prod.cx(), 195.0, vp_prod.cy() - 29.0, false);
+
+# VP Engineering -> its three reports
+bus(vp_eng.cx(), vp_eng.cy() + 29.0, 340.0, backend.cx(), qa.cx());
+stub(backend.cx(), 340.0, backend.cy() - 29.0, false);
+stub(platform.cx(), 340.0, platform.cy() - 29.0, false);
+stub(qa.cx(), 340.0, qa.cy() - 29.0, false);
+
+# VP Product -> its three reports
+bus(vp_prod.cx(), vp_prod.cy() + 29.0, 340.0, design.cx(), data.cx());
+stub(design.cx(), 340.0, design.cy() - 29.0, false);
+stub(growth.cx(), 340.0, growth.cy() - 29.0, false);
+stub(data.cx(), 340.0, data.cy() - 29.0, false);
+
+# dotted-line report: Platform also reports to VP Product
+scene.connector(platform, "e", vp_prod, "w", "elbow", "none", "arrow", "5 5", "#8fb4d9", 1.8, "", 0.5, 0.0, 0.0);
+
+scene.render_png("build/rendered/org-chart-grid.png", 1000, 640, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/org-chart-grid.png", "images/org-chart-grid.png");
+println("wrote images/org-chart-grid.png");

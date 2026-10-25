@@ -1,0 +1,26 @@
+# A compact coordinate frame using the retained arrow helper.
+out = ARGV.len() > 0 ? ARGV[0] : "build/arrow-helper.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 600, "#101820");
+scene.axes(110.0, 70.0, 700.0, 430.0, 0.0, 10.0, -1.0, 1.0, 5, "#7fa8d0");
+let trajectory = scene.polyline("110 370 180 330 250 286 320 250 390 232 460 238 530 268 600 314 670 374 740 430 810 458", "#6fbdb4", 4.0);
+trajectory.set_attr("marker-end", "arrow");
+scene.arrow(110.0, 500.0, 820.0, 500.0, "#6fbdb4", 2.5);
+scene.arrow(110.0, 500.0, 110.0, 58.0, "#f5c16c", 2.5);
+scene.text(826.0, 505.0, 16.0, "x", "#6fbdb4");
+scene.text(102.0, 52.0, 16.0, "y", "#f5c16c");
+scene.text(142.0, 112.0, 24.0, "annotated trajectory", "#dbe7f3");
+scene.rect(620.0, 94.0, 180.0, 62.0, "#1e3247").set_attr("stroke", "#4a6a88").set_attr("stroke-width", "1");
+scene.line(636.0, 120.0, 676.0, 120.0, "#6fbdb4", 3.0);
+scene.text(688.0, 125.0, 14.0, "trajectory", "#dbe7f3");
+scene.render_png("build/rendered/arrow-helper.png", 900, 600, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/arrow-helper.png", "images/arrow-helper.png");
+println("wrote images/arrow-helper.png");

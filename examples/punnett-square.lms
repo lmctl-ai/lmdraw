@@ -1,0 +1,186 @@
+# Mendel's dihybrid cross: why 9 : 3 : 3 : 1, and did his peas agree?
+# Two pea plants heterozygous for seed shape (R round > r wrinkled) and seed
+# colour (Y yellow > y green) are crossed. The lmdraw VM fills the 4 x 4 Punnett
+# square from the four gametes; lmscript enumerates the same 16 combinations,
+# tallies the phenotype ratio and runs a chi-square test against Mendel's 1866
+# counts (315 round-yellow, 108 round-green, 101 wrinkled-yellow, 32 wrinkled-green).
+# Known answers: 9 : 3 : 3 : 1; chi-square = 0.47 with 3 degrees of freedom, p = 0.93.
+# Writes images/punnett-square.png (900x640).
+out = ARGV.len() > 0 ? ARGV[0] : "build/punnett-square.dslb";
+mkdir("images");
+mkdir("build");
+
+PI = 3.141592653589793;
+gametes = ["RY", "Ry", "rY", "ry"];
+counts = {"round yellow": 0, "round green": 0, "wrinkled yellow": 0, "wrinkled green": 0};
+for (g1 in gametes) {
+  for (g2 in gametes) {
+    let shape = (char_at(g1, 0) == "R" || char_at(g2, 0) == "R") ? "round" : "wrinkled";
+    let colour = (char_at(g1, 1) == "Y" || char_at(g2, 1) == "Y") ? "yellow" : "green";
+    let key = shape + " " + colour;
+    counts[key] = counts[key] + 1;
+  }
+}
+order = ["round yellow", "round green", "wrinkled yellow", "wrinkled green"];
+mendel = [315.0, 108.0, 101.0, 32.0];
+total = sum(mendel);
+chi2 = 0.0;
+expected = [];
+for (i in range(0, 4)) {
+  let e = total * counts[order[i]] / 16.0;
+  push(expected, e);
+  chi2 = chi2 + (mendel[i] - e) * (mendel[i] - e) / e;
+}
+fn exp_s(x) { let term = 1.0; let total = 1.0; for (k in range(1, 40)) { term = term * x / k; total = total + term; } return total; }
+fn erf_s(z) { let term = z; let total = z; for (n in range(1, 40)) { term = -term * z * z / n; total = total + term / (2 * n + 1); } return 2.0 / sqrt(PI) * total; }
+# Chi-square survival function for 3 degrees of freedom.
+p_value = 1.0 - erf_s(sqrt(chi2 / 2.0)) + sqrt(2.0 * chi2 / PI) * exp_s(-chi2 / 2.0);
+println(sprintf("ratio %d : %d : %d : %d; chi-square = %.3f (3 df), p = %.3f",
+  counts[order[0]], counts[order[1]], counts[order[2]], counts[order[3]], chi2, p_value));
+
+ratio_txt = sprintf("%d : %d : %d : %d", counts[order[0]], counts[order[1]], counts[order[2]], counts[order[3]]);
+obs_txt = sprintf("%.0f\n%.0f\n%.0f\n%.0f", mendel[0], mendel[1], mendel[2], mendel[3]);
+exp_txt = sprintf("%.1f\n%.1f\n%.1f\n%.1f", expected[0], expected[1], expected[2], expected[3]);
+fisher_txt = sprintf("The fit is excellent: a match this close happens by chance only %.0f %% of the time. Fits like this across all his experiments made Fisher (1936) suspect Mendel's data were a little too clean.", 100.0 * (1.0 - p_value));
+chi_txt = sprintf("χ² = %.2f, 3 degrees of freedom, p = %.2f", chi2, p_value);
+# Bars: observed (solid) vs expected (outline), 0.42 px per pea.
+ob = []; ex = [];
+for (i in range(0, 4)) { push(ob, str(mendel[i] * 0.42)); push(ex, str(expected[i] * 0.42)); }
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(900, 640, "#0f1720");
+scene.text(40.0, 44.0, 24.0, "Mendel's peas: the 9 : 3 : 3 : 1 Punnett square", "#e6edf3").set_attr("font-weight", "700");
+scene.text(40.0, 72.0, 14.0, "RrYy × RrYy. Round (R) beats wrinkled (r); yellow (Y) beats green (y). Each parent makes four gamete types equally often.", "#9fb3c8");
+
+let x0 = 150.0;
+let y0 = 150.0;
+let cs = 92.0;
+scene.text(x0 + 2.0 * cs, 112.0, 13.0, "pollen gametes", "#9fb3c8").set_attr("text-anchor", "middle");
+let side = scene.text(96.0, y0 + 2.0 * cs, 13.0, "egg gametes", "#9fb3c8");
+side.set_attr("text-anchor", "middle");
+side.set_attr("transform", "rotate(-90 96 " + str(y0 + 2.0 * cs) + ")");
+for (i in range(0, 4)) {
+  let gs = "R";
+  if (i >= 2) { gs = "r"; }
+  let gc = "Y";
+  if (i % 2 == 1) { gc = "y"; }
+  scene.text(x0 + float(i) * cs + cs / 2.0, 138.0, 16.0, gs + gc, "#e6edf3").set_attr("text-anchor", "middle").set_attr("font-weight", "700");
+  scene.text(x0 - 14.0, y0 + float(i) * cs + cs / 2.0 + 6.0, 16.0, gs + gc, "#e6edf3").set_attr("text-anchor", "end").set_attr("font-weight", "700");
+}
+for (row in range(0, 4)) {
+  for (col in range(0, 4)) {
+    # Alleles from each gamete; dominant allele written first.
+    let s1 = "R";
+    if (row >= 2) { s1 = "r"; }
+    let s2 = "R";
+    if (col >= 2) { s2 = "r"; }
+    let c1 = "Y";
+    if (row % 2 == 1) { c1 = "y"; }
+    let c2 = "Y";
+    if (col % 2 == 1) { c2 = "y"; }
+    let shape = s1 + s2;
+    if (s1 == "r" && s2 == "R") { shape = "Rr"; }
+    let colour = c1 + c2;
+    if (c1 == "y" && c2 == "Y") { colour = "Yy"; }
+    let round = s1 == "R" || s2 == "R";
+    let yellow = c1 == "Y" || c2 == "Y";
+    let fill = "#1d2b38";
+    let pea = "#f5c16c";
+    if (!yellow) { pea = "#8fd694"; }
+    let x = x0 + float(col) * cs;
+    let y = y0 + float(row) * cs;
+    let cell = scene.rect(x + 2.0, y + 2.0, cs - 4.0, cs - 4.0, fill);
+    cell.set_attr("rx", "6");
+    let cx = x + cs / 2.0;
+    let cy = y + 36.0;
+    if (round) {
+      scene.circle(cx, cy, 17.0, pea);
+    } else {
+      # Wrinkled seed: a bumpy outline.
+      let d = "";
+      for (k in range(0, 25)) {
+        let t = 6.283185307179586 * float(k) / 24.0;
+        let rr = 16.0 + 2.6 * sin(7.0 * t) + 1.2 * cos(11.0 * t);
+        let px = cx + rr * cos(t);
+        let py = cy + rr * sin(t);
+        if (k == 0) { d = "M " + str(px) + " " + str(py); } else { d = d + " L " + str(px) + " " + str(py); }
+      }
+      scene.path(d + " Z", pea, "#0f1720", 1.0);
+    }
+    scene.text(cx, y + cs - 14.0, 14.0, shape + colour, "#e6edf3").set_attr("text-anchor", "middle");
+  }
+}
+
+# Tally and chi-square.
+let panel = scene.rect(560.0, 104.0, 322.0, 250.0, "#16222e");
+panel.set_attr("stroke", "#2c4156");
+panel.set_attr("rx", "8");
+scene.text(576.0, 130.0, 14.0, "Phenotypes in the 16 squares", "#e6edf3").set_attr("font-weight", "700");
+scene.circle(588.0, 160.0, 9.0, "#f5c16c");
+scene.text(604.0, 165.0, 13.0, "round yellow", "#e6edf3");
+scene.circle(588.0, 186.0, 9.0, "#8fd694");
+scene.text(604.0, 191.0, 13.0, "round green", "#e6edf3");
+for (q in range(0, 2)) {
+  let cy = 212.0 + 26.0 * float(q);
+  let d = "";
+  for (k in range(0, 25)) {
+    let t = 6.283185307179586 * float(k) / 24.0;
+    let rr = 8.5 + 1.4 * sin(7.0 * t) + 0.6 * cos(11.0 * t);
+    if (k == 0) { d = "M " + str(588.0 + rr * cos(t)) + " " + str(cy + rr * sin(t)); } else { d = d + " L " + str(588.0 + rr * cos(t)) + " " + str(cy + rr * sin(t)); }
+  }
+  let col = "#f5c16c";
+  if (q == 1) { col = "#8fd694"; }
+  scene.path(d + " Z", col, "none", 1.0);
+}
+scene.text(604.0, 217.0, 13.0, "wrinkled yellow", "#e6edf3");
+scene.text(604.0, 243.0, 13.0, "wrinkled green", "#e6edf3");
+scene.text(866.0, 165.0, 13.0, "9 / 16", "#e6edf3").set_attr("text-anchor", "end");
+scene.text(866.0, 191.0, 13.0, "3 / 16", "#e6edf3").set_attr("text-anchor", "end");
+scene.text(866.0, 217.0, 13.0, "3 / 16", "#e6edf3").set_attr("text-anchor", "end");
+scene.text(866.0, 243.0, 13.0, "1 / 16", "#e6edf3").set_attr("text-anchor", "end");
+scene.line(576.0, 260.0, 866.0, 260.0, "#2c4156", 1.0);
+scene.text(576.0, 286.0, 13.0, "counted by lmscript", "#9fb3c8");
+scene.text(866.0, 288.0, 20.0, ${ratio_txt}, "#f5c16c").set_attr("text-anchor", "end").set_attr("font-weight", "700");
+scene.text(576.0, 316.0, 12.0, "A 3 : 1 ratio for shape times a 3 : 1 ratio for colour, because the two genes sort independently.", "#9fb3c8", 290.0);
+
+let wi = scene.rect(560.0, 370.0, 322.0, 248.0, "#1b1a26");
+wi.set_attr("stroke", "#4b3f6b");
+wi.set_attr("rx", "8");
+scene.text(576.0, 396.0, 14.0, "Mendel's 556 seeds (1866)", "#b49cf0").set_attr("font-weight", "700");
+scene.text(576.0, 420.0, 12.0, "observed", "#9fb3c8");
+scene.text(656.0, 420.0, 12.0, "expected", "#9fb3c8");
+scene.text(576.0, 444.0, 13.0, ${obs_txt}, "#e6edf3");
+scene.text(656.0, 444.0, 13.0, ${exp_txt}, "#9fb3c8");
+let b0 = scene.rect(730.0, 433.0, 10.0, 11.0, "#f5c16c");
+b0.set_attr("width", ${ob[0]});
+let b1 = scene.rect(730.0, 449.0, 10.0, 11.0, "#8fd694");
+b1.set_attr("width", ${ob[1]});
+let b2 = scene.rect(730.0, 465.0, 10.0, 11.0, "#f5c16c");
+b2.set_attr("width", ${ob[2]});
+let b3 = scene.rect(730.0, 481.0, 10.0, 11.0, "#8fd694");
+b3.set_attr("width", ${ob[3]});
+let e0 = scene.rect(730.0, 431.0, 10.0, 15.0, "none");
+e0.set_attr("width", ${ex[0]});
+let e1 = scene.rect(730.0, 447.0, 10.0, 15.0, "none");
+e1.set_attr("width", ${ex[1]});
+let e2 = scene.rect(730.0, 463.0, 10.0, 15.0, "none");
+e2.set_attr("width", ${ex[2]});
+let e3 = scene.rect(730.0, 479.0, 10.0, 15.0, "none");
+e3.set_attr("width", ${ex[3]});
+let eg = scene.group();
+eg.add(e0);
+eg.add(e1);
+eg.add(e2);
+eg.add(e3);
+eg.set_attr("stroke", "#e6edf3");
+eg.set_attr("stroke-width", "1");
+eg.set_attr("stroke-dasharray", "3 2");
+scene.text(576.0, 528.0, 13.0, ${chi_txt}, "#e6edf3");
+scene.text(576.0, 552.0, 12.0, ${fisher_txt}, "#9fb3c8", 290.0);
+scene.render_png("images/punnett-square.png", 900, 640, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+println("wrote images/punnett-square.png");

@@ -1,0 +1,49 @@
+# Node tour: retained nodes, nested groups, a linear gradient, path geometry,
+# an embedded PNG image, text measurement and a custom TrueType font.
+# lmdraw loads fonts only from assets/fonts/; when run outside the repository
+# (lmctl autorun) the Noto Sans file is fetched from the repository first.
+# Writes images/node-tour.png (640x360).
+out = ARGV.len() > 0 ? ARGV[0] : "build/node-tour.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+font = "assets/fonts/NotoSans-Regular.ttf";
+if (!file_exists(font)) {
+  mkdir("assets/fonts");
+  assert(which("curl") != null, "curl is needed to fetch " + font);
+  dl = system curl -sSfL -o ${font} https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/assets/fonts/NotoSans-Regular.ttf;
+  assert(dl.code == 0, "could not download " + font);
+}
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(640, 360, "#152438");
+scene.load_font("Noto Alternate", "assets/fonts/NotoSans-Regular.ttf", false);
+let gradient = scene.linear_gradient("panel-fill", 0.0, 0.0, 1.0, 1.0);
+gradient.stop(0.0, "#294c62");
+gradient.stop(1.0, "#1f344b");
+let panel = scene.rect(40.0, 40.0, 560.0, 280.0, "url(#panel-fill)");
+panel.set_attr("stroke", "#6fbdb4");
+panel.set_attr("stroke-width", "2");
+let group = scene.group();
+let inner = scene.group();
+let orbit = scene.circle(494.0, 166.0, 70.0, "#38677a");
+let core = scene.ellipse(494.0, 166.0, 38.0, 52.0, "#6fbdb4");
+inner.add(orbit);
+inner.add(core);
+inner.set_attr("opacity", "0.96");
+group.add(inner);
+let track = scene.polyline("100,235 175,195 245,235 315,195", "#f5c16c", 4.0);
+let image = scene.image("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAF0lEQVR4nGP4ejDnv6iKxX+G/L1bwAwAU9EI4ZelYEcAAAAASUVORK5CYII=", 530.0, 60.0, 24.0, 24.0);
+let mark = scene.path("M 100 275 L 125 250 L 150 275 Z", "#f5c16c", "none", 1.0);
+let measured = scene.measure_text("Retained scenes", 32.0, true);
+let title = scene.text(80.0, 130.0, 32.0, "Retained scenes", "#f5f8fb");
+title.set_attr("font-weight", "700");
+let subtitle = scene.text(80.0, 174.0, 16.0, "Nodes stay addressable between frames.", "#dce7f0");
+subtitle.set_attr("font-family", "Noto Alternate");
+scene.render_png("build/rendered/node-tour.png", 640, 360, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/node-tour.png", "images/node-tour.png");
+println("wrote images/node-tour.png");

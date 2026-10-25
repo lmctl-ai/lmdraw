@@ -1,0 +1,65 @@
+# Layered architecture block diagram: four horizontal bands
+# (presentation / service / data / external) with component boxes, a
+# database cylinder in the data layer, elbow-routed connectors between
+# components across layers, and a note shape with a folded corner. Shapes
+# and connectors come from the host diagram API; the two long connectors
+# that route around obstacles stay as explicit path data.
+out = ARGV.len() > 0 ? ARGV[0] : "build/architecture-layers.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(1000, 720, "#101820");
+
+scene.text(40.0, 44.0, 22.0, "Layered architecture", "#dbe7f3").set_attr("font-weight", "700");
+scene.text(40.0, 68.0, 14.0, "an order service and its neighbours, by layer", "#9db4c8");
+
+fn layer(y1: float, y2: float, label: string) -> void {
+  scene.cluster(180.0, y1, 780.0, y2 - y1, "", "#131c28", "#2c4156", 10.0, 13.0);
+  scene.text(196.0, y1 + 24.0, 13.0, label, "#6fbdb4").set_attr("font-weight", "700");
+}
+
+layer(100.0, 215.0, "presentation");
+layer(235.0, 370.0, "service");
+layer(390.0, 525.0, "data");
+layer(545.0, 660.0, "external");
+
+# components
+let spa = scene.box(320.0, 158.0, 140.0, 64.0, "web SPA", "#1e3247", "#4a6a88", 8.0, 14.0);
+let mobile = scene.box(520.0, 158.0, 140.0, 64.0, "mobile app", "#1e3247", "#4a6a88", 8.0, 14.0);
+let gateway = scene.box(280.0, 302.0, 130.0, 60.0, "API gateway", "#1e3247", "#4a6a88", 8.0, 14.0);
+let order_svc = scene.box(480.0, 302.0, 140.0, 60.0, "order service", "#1e3247", "#4a6a88", 8.0, 14.0);
+let billing = scene.box(680.0, 302.0, 140.0, 60.0, "billing service", "#1e3247", "#4a6a88", 8.0, 14.0);
+let postgres = scene.cylinder(300.0, 458.0, 130.0, 96.0, "Postgres", "#1e3247", "#6fbdb4", 14.0);
+let redis = scene.box(500.0, 458.0, 120.0, 60.0, "Redis", "#1e3247", "#4a6a88", 8.0, 14.0);
+let event_log = scene.box(700.0, 458.0, 140.0, 60.0, "event log", "#1e3247", "#4a6a88", 8.0, 14.0);
+let sendgrid = scene.box(300.0, 602.0, 130.0, 60.0, "SendGrid", "#1e3247", "#4a6a88", 8.0, 14.0);
+let s3 = scene.box(460.0, 602.0, 110.0, 60.0, "S3", "#1e3247", "#4a6a88", 8.0, 14.0);
+let stripe = scene.box(700.0, 602.0, 130.0, 60.0, "Stripe", "#1e3247", "#4a6a88", 8.0, 14.0);
+
+# connectors
+scene.connector(spa, "s", gateway, "n", "elbow", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(mobile, "s", order_svc, "n", "straight", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(gateway, "e", order_svc, "w", "straight", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(order_svc, "s", postgres, "n", "elbow", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(500.0, 332.0, redis, "n", "straight", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(550.0, 296.0, event_log, "w", "elbow", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+scene.connector(430.0, 332.0, s3, "n", "straight", "none", "arrow", "none", "#8fb4d9", 2.0, "", 0.5, 0.0, 0.0);
+# these two route around other components, so they keep explicit path data
+scene.path("M 450.0 332.0 V 350.0 H 155.0 V 570.0 H 233.0", "none", "#8fb4d9", 2.0).set_attr("marker-end", "arrow");
+scene.path("M 680.0 332.0 V 376.0 H 905.0 V 570.0 H 767.0", "none", "#8fb4d9", 2.0).set_attr("marker-end", "arrow");
+
+# folded-corner note in the service layer
+scene.note(770.0, 245.0, 190.0, 115.0, "", "#1b1a26", "#4b3f6b", 12.0);
+scene.text(782.0, 305.0, 12.0, "deployed in 2 regions", "#c9bce0", 165.0);
+scene.text(782.0, 323.0, 12.0, "active/active failover", "#c9bce0", 165.0);
+scene.text(782.0, 288.0, 12.0, "note", "#9db4c8").set_attr("font-weight", "700");
+
+scene.render_png("build/rendered/architecture-layers.png", 1000, 720, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/architecture-layers.png", "images/architecture-layers.png");
+println("wrote images/architecture-layers.png");

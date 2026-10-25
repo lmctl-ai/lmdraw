@@ -1,0 +1,85 @@
+# Layered tree: a small data taxonomy with straight edges, three levels,
+# and one highlighted leaf. Geometry comes from data lists with loops in
+# lmscript; repeated nodes are one path of rounded-rect subpaths.
+out = ARGV.len() > 0 ? ARGV[0] : "build/tree-org.dslb";
+mkdir("images");
+mkdir("build");
+mkdir("build/rendered");
+mid_xs = [220.0, 480.0, 740.0];
+mid_titles = ["parsers", "engines", "outputs"];
+leaf_xs = [
+  [80.0, 180.0, 280.0],
+  [380.0, 480.0, 580.0],
+  [680.0, 780.0, 880.0]
+];
+leaf_titles = [
+  ["html", "css", "json"],
+  ["raster", "vector", "font"],
+  ["png", "svg", "mp4"]
+];
+
+# rounded-rect subpath helper (plain rects are fine for tree nodes)
+nodes_d = "";
+# (lmscript fn kept untyped below)
+fn rrect(x, y, w, h) {
+  return "M " + str(x) + " " + str(y) + " L " + str(x + w) + " " + str(y) +
+    " L " + str(x + w) + " " + str(y + h) + " L " + str(x) + " " + str(y + h) + " Z ";
+}
+nodes_d = nodes_d + rrect(480.0 - 65.0, 50.0, 130.0, 40.0);
+for (i in range(0, 3)) {
+  nodes_d = nodes_d + rrect(mid_xs[i] - 65.0, 210.0, 130.0, 40.0);
+}
+leaves_d = "";
+for (i in range(0, 3)) {
+  for (j in range(0, 3)) {
+    leaves_d = leaves_d + rrect(leaf_xs[i][j] - 39.0, 370.0, 78.0, 40.0);
+  }
+}
+
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
+scene.canvas(960, 520, "#101820");
+
+for (i in range(0, 3)) {
+  let x = 220.0 + 260.0 * float(i);
+  let trunk = scene.line(480.0, 90.0, x, 205.0, "#8fb4d9", 1.8);
+  trunk.set_attr("marker-end", "dot");
+  let leaf_base = 80.0;
+  if (i == 1) { leaf_base = 380.0; }
+  else if (i == 2) { leaf_base = 680.0; }
+  for (j in range(0, 3)) {
+    let branch = scene.line(x, 250.0, leaf_base + 100.0 * float(j), 365.0, "#8fb4d9", 1.8);
+    branch.set_attr("marker-end", "dot");
+  }
+}
+scene.path(${nodes_d}, "#1e3247", "#4a6a88", 1.5);
+scene.path(${leaves_d}, "#1e3247", "#4a6a88", 1.5);
+
+# highlighted leaf: png (leaf 0 of outputs)
+let hot = scene.rect(680.0 - 39.0, 370.0, 78.0, 40.0, "#274b3f");
+hot.set_attr("stroke", "#7bbf5a");
+hot.set_attr("stroke-width", "2");
+
+scene.text(480.0, 75.0, 14.0, "pipeline", "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(220.0, 235.0, 14.0, ${mid_titles[0]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(480.0, 235.0, 14.0, ${mid_titles[1]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(740.0, 235.0, 14.0, ${mid_titles[2]}, "#dbe7f3").set_attr("text-anchor", "middle");
+
+scene.text(80.0, 395.0, 14.0, ${leaf_titles[0][0]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(180.0, 395.0, 14.0, ${leaf_titles[0][1]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(280.0, 395.0, 14.0, ${leaf_titles[0][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(380.0, 395.0, 14.0, ${leaf_titles[1][0]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(480.0, 395.0, 14.0, ${leaf_titles[1][1]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(580.0, 395.0, 14.0, ${leaf_titles[1][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(680.0, 395.0, 14.0, ${leaf_titles[2][0]}, "#d8f3b0").set_attr("text-anchor", "middle");
+scene.text(780.0, 395.0, 14.0, ${leaf_titles[2][1]}, "#dbe7f3").set_attr("text-anchor", "middle");
+scene.text(880.0, 395.0, 14.0, ${leaf_titles[2][2]}, "#dbe7f3").set_attr("text-anchor", "middle");
+
+scene.text(60.0, 470.0, 15.0, "straight-edge layered tree, one highlighted path", "#9db4c8");
+scene.render_png("build/rendered/tree-org.png", 960, 520, 1);
+end _lmcode_
+savedsl(p, out);
+r = system ${dsl_cli(p)} --dsl ${out};
+if (r.code != 0) { println(r.stderr); }
+assert(r.code == 0);
+copy_file("build/rendered/tree-org.png", "images/tree-org.png");
+println("wrote images/tree-org.png");
