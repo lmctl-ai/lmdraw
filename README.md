@@ -81,7 +81,7 @@ npm install -g @lmctl-ai/lmctl
 lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/hohmann-transfer.lms
 ```
 
-The first run downloads the lmdraw release binary for your platform; the example then prints its computed answers and writes `images/hohmann-transfer.png` in the current folder. Every example runs the same way and finishes in a few seconds.
+The first run downloads the current Linux x86-64 or arm64 lmdraw release binary (glibc >= 2.35); the example then prints its computed answers and writes `images/hohmann-transfer.png` in the current folder. Earlier releases may contain other platform assets; macOS and Windows are not produced by the current lane. Every example runs the same way and finishes in a few seconds.
 
 ## Write your own
 
