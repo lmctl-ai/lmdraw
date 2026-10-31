@@ -55,7 +55,7 @@ scene.text(857.0, 92.0, 12.0, "retry", "#9db4c8").set_attr("text-anchor", "middl
 scene.render_png("build/rendered/swimlane-process.png", 1300, 660, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/swimlane-process.png", "images/swimlane-process.png");

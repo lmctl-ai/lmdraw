@@ -128,7 +128,7 @@ scene.text(636.0, 158.0, 12.5, "Predators can only multiply after prey is plenti
 scene.render_png("images/lotka-volterra.png", 900, 640, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/lotka-volterra.png");

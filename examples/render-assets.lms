@@ -31,7 +31,7 @@ scene.load_svg("assets/level-team.svg", "svg-team");
 scene.render_png("build/rendered/svg-level-team.png", 480, 300, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 for (name in svgs) {

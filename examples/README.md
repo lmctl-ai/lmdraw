@@ -3,7 +3,7 @@
 Every example is a self-contained lmscript program. It computes its content in
 plain lmscript, compiles a `_dsl_` block bound to lmdraw
 (`cli="lmdraw" install="github:lmctl-ai/lmdraw@latest"`), runs it with
-`system ${dsl_cli(p)} --dsl ...`, and copies the PNG from `private implementation detail` to
+`system ${dsl_cli(p)} --lmcode ...`, and copies the PNG from `private implementation detail` to
 `images/<name>.png` in the current folder. Run any of them from an empty folder:
 
     lmctl autorun https://raw.githubusercontent.com/lmctl-ai/lmdraw/main/examples/<name>.lms

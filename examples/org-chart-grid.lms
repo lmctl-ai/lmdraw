@@ -74,7 +74,7 @@ scene.connector(platform, "e", vp_prod, "w", "elbow", "none", "arrow", "5 5", "#
 scene.render_png("build/rendered/org-chart-grid.png", 1000, 640, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/org-chart-grid.png", "images/org-chart-grid.png");

@@ -142,7 +142,7 @@ scene.text(612.0, 502.0, 12.0, "Without relativity (γ = 1), e^(−15000/658) �
 scene.render_png("images/relativity-lorentz.png", 900, 620, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/relativity-lorentz.png");

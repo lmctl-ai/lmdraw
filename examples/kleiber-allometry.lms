@@ -147,7 +147,7 @@ scene.text(608.0, 524.0, 12.0, "Heartbeats scale oppositely (f ∝ M^(−¼)), s
 scene.render_png("images/kleiber-allometry.png", 900, 620, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/kleiber-allometry.png");

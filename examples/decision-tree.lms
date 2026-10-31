@@ -61,7 +61,7 @@ leaf(990.0, 510.0, "Standard", "neutral");
 scene.render_png("build/rendered/decision-tree.png", 1100, 640, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/decision-tree.png", "images/decision-tree.png");

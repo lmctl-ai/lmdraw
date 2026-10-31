@@ -72,7 +72,7 @@ scene.text(70.0, 432.0, 12.0, "bars: merged, line: reviewed", "#9db4c8");
 scene.render_png("build/rendered/chart-bars-lines.png", 800, 460, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/chart-bars-lines.png", "images/chart-bars-lines.png");

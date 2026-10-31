@@ -58,7 +58,7 @@ scene.text(782.0, 288.0, 12.0, "note", "#9db4c8").set_attr("font-weight", "700")
 scene.render_png("build/rendered/architecture-layers.png", 1000, 720, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/architecture-layers.png", "images/architecture-layers.png");

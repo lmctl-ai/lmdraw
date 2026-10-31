@@ -1,6 +1,6 @@
 # lmdraw script guide
 
-lmdraw runs lmscript bytecode. Compile each script against private implementation detail (or the identical bytes printed by lmdraw --schema --json), then run the bytecode with lmdraw --dsl. The executable embeds that schema and the Noto Sans Regular and Bold fonts.
+lmdraw runs lmscript bytecode. Compile each script against private implementation detail (or the identical bytes printed by lmdraw --schema --json), then run the bytecode with lmdraw --lmcode. The executable embeds that schema and the Noto Sans Regular and Bold fonts.
 
 ## Coordinate system
 
@@ -24,7 +24,7 @@ Compile and run from the repository root:
 
 ```sh
 lmscript examples/title-card.lms private implementation detail
-private implementation detail --dsl private implementation detail
+private implementation detail --lmcode private implementation detail
 ```
 
 ## Schema reference
@@ -114,8 +114,8 @@ The exact registry summary and signature list are generated from the live host:
 
 ```sh
 private implementation detail --schema
-private implementation detail --dsl-signatures
-lmscript --dsl-signatures private implementation detail
+private implementation detail --lmcode-signatures
+lmscript --lmcode-signatures private implementation detail
 ```
 
 ## Diagram building blocks
@@ -268,7 +268,7 @@ ffmpeg -framerate 24 -start_number 0 -i 'private implementation detail%d.png' -f
 - SVG input: direct child of assets/ and at most 2 MiB.
 - Font input: direct child of assets/fonts/, TrueType, at most 8 MiB.
 - Scene image node: embedded PNG data URI, at most 1.5 MiB, with dimensions no larger than 4096 per side and 8,000,000 pixels total.
-- Bytecode input: at most 16 MiB per file. Every file passed to one --dsl invocation is verified before any script runs.
+- Bytecode input: at most 16 MiB per file. Every file passed to one --lmcode invocation is verified before any script runs.
 - PNG outputs: direct child of private implementation detail or (v0.2.4 and later) images/; both directories are created on demand, may not be symbolic links, and symbolic-link targets, subdirectories and path traversal are rejected. Writes use same-directory temporary files and atomic replacement. New file permissions follow the process umask.
 - No network access is performed by the host. VM instruction budgets are not imposed; only host-side input and image bounds apply.
 
@@ -299,7 +299,7 @@ scene.canvas(640, 360, "#152438");
 scene.render_png("private implementation detail", 640, 360, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 assert(r.code == 0);
 copy_file("private implementation detail", "images/card.png");
 ```
@@ -317,7 +317,7 @@ Practical notes:
   helpers (`examples/rc-lowpass.lms`, `examples/kepler-second-law.lms`).
 - A block may define typed functions (`fn box(x: float, y: float) -> void { ... }`)
   and may be created inside an lmscript function; several saved blocks passed to
-  one `lmdraw --dsl a.dslb b.dslb` share one scene (`examples/truss-bridge.lms`).
+  one `lmdraw --lmcode a.dslb b.dslb` share one scene (`examples/truss-bridge.lms`).
 - The embedded Noto Sans + Noto Sans Math fonts cover Latin, Greek, Cyrillic, sub/superscripts, arrows (→ ← ↑ ↓ ↔ ⇒ ⇔), and common math symbols (∝, ∞, ≤, ≥, ≈, ≠, √, ∂, ∆, ∇, ∫, ∑, ∏, ✓).
 - Optional tools: test with `which("ffmpeg") != null` before calling them, since
   `system` throws when the program is missing.
@@ -326,7 +326,7 @@ Practical notes:
 
 ```sh
 lmscript my-scene.lms private implementation detail
-private implementation detail --dsl private implementation detail
+private implementation detail --lmcode private implementation detail
 file private implementation detail
 sha256sum private implementation detail
 ```

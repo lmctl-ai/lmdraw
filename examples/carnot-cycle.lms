@@ -156,7 +156,7 @@ scene.text(616.0, 516.0, 12.0, "Real engines reach roughly half to two thirds of
 scene.render_png("images/carnot-cycle.png", 900, 600, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/carnot-cycle.png");

@@ -183,7 +183,7 @@ scene.text(xd + 4.0, 612.0, 12.0, ${sprintf("Hδ %.0f · Hγ %.0f", balmer_wl[3]
 scene.render_png("images/hydrogen-spectrum.png", 900, 700, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/hydrogen-spectrum.png");

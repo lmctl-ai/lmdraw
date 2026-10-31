@@ -137,7 +137,7 @@ scene.text(636.0, 412.0, 12.0, "Two identical RC sections with a buffer between 
 scene.render_png("images/rc-lowpass.png", 900, 700, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/rc-lowpass.png");

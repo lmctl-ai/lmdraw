@@ -54,7 +54,7 @@ scene.text(60.0, 100.0, 15.0, "sequential stages, one feedback loop", "#9db4c8",
 scene.render_png("build/rendered/flow-pipeline.png", 960, 420, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/flow-pipeline.png", "images/flow-pipeline.png");

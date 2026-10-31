@@ -166,7 +166,7 @@ savedsl(p, out);
 savedsl(qa, "build/truss-bridge-pratt.dslb");
 savedsl(qb, "build/truss-bridge-howe.dslb");
 savedsl(z, "build/truss-bridge-panel.dslb");
-r = system ${dsl_cli(p)} --dsl ${out} build/truss-bridge-pratt.dslb build/truss-bridge-howe.dslb build/truss-bridge-panel.dslb;
+r = system ${dsl_cli(p)} --lmcode ${out} build/truss-bridge-pratt.dslb build/truss-bridge-howe.dslb build/truss-bridge-panel.dslb;
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/truss-bridge.png");

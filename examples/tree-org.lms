@@ -78,7 +78,7 @@ scene.text(60.0, 470.0, 15.0, "straight-edge layered tree, one highlighted path"
 scene.render_png("build/rendered/tree-org.png", 960, 520, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/tree-org.png", "images/tree-org.png");

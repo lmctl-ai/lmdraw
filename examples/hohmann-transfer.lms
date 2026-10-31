@@ -123,7 +123,7 @@ scene.text(612.0, 498.0, 12.5, ${whatif}, "#c9d6e2", 256.0);
 scene.render_png("images/hohmann-transfer.png", 900, 620, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/hohmann-transfer.png");

@@ -134,7 +134,7 @@ scene.text(0.0, 0.0, 11.0, "this ramp", "#6fbdb4").set_attr("x", ${now_xy[0]}).s
 scene.render_png("images/incline-free-body.png", 900, 620, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/incline-free-body.png");

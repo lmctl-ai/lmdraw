@@ -100,11 +100,11 @@ scene.text(320.0, 106.0, 22.0, ${label}, "#e6edf3");
 scene.render_png("images/leo.png", 640, 200, 2);
 end _lmcode_
 savedsl(p, "private implementation detail");
-r = system ${dsl_cli(p)} --dsl private implementation detail;
+r = system ${dsl_cli(p)} --lmcode private implementation detail;
 assert(r.code == 0);
 ```
 
-The scene API: `canvas`, `rect`, `circle`, `ellipse`, `line`, `arrow`, `polyline`, `path` (SVG path data), `text` (with optional wrap width), `axes`, `log_axes` (semi-log and log–log decade ticks), `legend` (auto-measured multi-series legend box), `group`, `image` (PNG data URI), `linear_gradient`, `load_svg`, `load_font`, `measure_text` and `render_png`; every node keeps SVG-style attributes (`set_attr`) and can be changed between frames. Run `lmdraw --dsl-schema` for the exact signatures and read [docs/LLM_GUIDE.md](docs/LLM_GUIDE.md) for attributes, limits and recipes.
+The scene API: `canvas`, `rect`, `circle`, `ellipse`, `line`, `arrow`, `polyline`, `path` (SVG path data), `text` (with optional wrap width), `axes`, `log_axes` (semi-log and log–log decade ticks), `legend` (auto-measured multi-series legend box), `group`, `image` (PNG data URI), `linear_gradient`, `load_svg`, `load_font`, `measure_text` and `render_png`; every node keeps SVG-style attributes (`set_attr`) and can be changed between frames. Run `lmdraw --lmcode-schema` for the exact signatures and read [docs/LLM_GUIDE.md](docs/LLM_GUIDE.md) for attributes, limits and recipes.
 
 ## How it works
 

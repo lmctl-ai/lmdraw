@@ -160,7 +160,7 @@ scene.text(606.0, 542.0, 11.5, "Door closers, car shocks, and analog meters targ
 scene.render_png("images/damped-oscillator.png", 900, 620, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/damped-oscillator.png");

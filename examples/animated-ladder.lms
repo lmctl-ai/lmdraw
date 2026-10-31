@@ -23,7 +23,7 @@ for (i in range(0, 24)) {
 }
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/ladder-12.png", "images/animated-ladder.png");

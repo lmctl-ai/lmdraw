@@ -127,7 +127,7 @@ scene.text(688.0, 524.0, 12.0, "A negative di means the image is on the object's
 scene.render_png("images/lens-ray-diagram.png", 900, 640, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/lens-ray-diagram.png");

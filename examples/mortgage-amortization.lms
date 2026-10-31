@@ -132,7 +132,7 @@ scene.text(700.0, 440.0, 12.0, ${fast_txt}, "#c9d6e2", 172.0);
 scene.render_png("images/mortgage-amortization.png", 900, 600, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 println("wrote images/mortgage-amortization.png");

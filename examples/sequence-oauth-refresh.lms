@@ -45,7 +45,7 @@ scene.text(750.0, 74.0, 12.0, "response", "#9db4c8");
 scene.render_png("build/rendered/sequence-oauth-refresh.png", 1000, 620, 1);
 end _lmcode_
 savedsl(p, out);
-r = system ${dsl_cli(p)} --dsl ${out};
+r = system ${dsl_cli(p)} --lmcode ${out};
 if (r.code != 0) { println(r.stderr); }
 assert(r.code == 0);
 copy_file("build/rendered/sequence-oauth-refresh.png", "images/sequence-oauth-refresh.png");
