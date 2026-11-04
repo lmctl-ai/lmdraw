@@ -8,7 +8,6 @@
 # what-if sweep of the hot-side temperature.
 # Known answers: Qh = 2881 J, Qc = 1729 J, W = 1153 J, efficiency 40 % = 1 - Tc/Th.
 # Writes images/carnot-cycle.png (900x600).
-out = ARGV.len() > 0 ? ARGV[0] : "build/carnot-cycle.dslb";
 mkdir("images");
 mkdir("build");
 
@@ -155,8 +154,7 @@ scene.text(866.0, 426.0, 12.5, ${sweep_txt}, "#e6edf3").set_attr("text-anchor", 
 scene.text(616.0, 516.0, 12.0, "Real engines reach roughly half to two thirds of this limit.", "#9fb3c8", 252.0);
 scene.render_png("images/carnot-cycle.png", 900, 600, 1);
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(p);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/carnot-cycle.png");

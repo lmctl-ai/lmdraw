@@ -11,9 +11,10 @@ case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) host="$host.exe";; esac
 [[ -x "$host" ]] || { echo "error: build lmdraw first with cmake --build build" >&2; exit 2; }
 mkdir -p build/rendered docs/readme
 
+# Each script runs its block with run_lmcode on the lmdraw first on PATH: this build.
+PATH="$(cd "$(dirname "$host")" && pwd):$PATH"; export PATH
 for name in architecture architecture-light; do
-  "$compiler" "docs/readme/$name.lms" "build/readme-$name.dslb"
-  "$host" --lmcode "build/readme-$name.dslb" >/dev/null
+  "$compiler" "docs/readme/$name.lms" >/dev/null
   cp "build/rendered/readme-$name.png" "docs/readme/$name.png"
 done
 echo "README architecture diagrams updated in docs/readme/"

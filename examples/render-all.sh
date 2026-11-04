@@ -20,7 +20,7 @@ rm -rf images
 mkdir -p docs/images
 for src in examples/*.lms; do
   name="$(basename "$src" .lms)"
-  "$LMSCRIPT" "$src" "$BUILD_DIR/$name.dslb" >/dev/null
+  "$LMSCRIPT" "$src" >/dev/null
 done
 gallery="hydrogen-spectrum kepler-second-law hohmann-transfer carnot-cycle lens-ray-diagram incline-free-body
   truss-bridge rc-lowpass lotka-volterra punnett-square mortgage-amortization npv-irr-cashflow

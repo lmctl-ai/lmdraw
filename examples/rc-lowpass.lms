@@ -6,7 +6,6 @@
 # Known answers: fc = 1/(2 pi R C) = 1591.5 Hz; -3.01 dB and -45 deg at fc;
 # -20 dB/decade (one stage) and -40 dB/decade (two stages) far above fc.
 # Writes images/rc-lowpass.png (900x700).
-out = ARGV.len() > 0 ? ARGV[0] : "build/rc-lowpass.dslb";
 mkdir("images");
 mkdir("build");
 
@@ -136,8 +135,7 @@ scene.text(636.0, 390.0, 14.0, "What if: two stages", "#b49cf0").set_attr("font-
 scene.text(636.0, 412.0, 12.0, "Two identical RC sections with a buffer between them square the response: −6 dB at fc, twice the slope and up to −180° of phase. Sharper, at the cost of more lag.", "#c9d6e2", 232.0);
 scene.render_png("images/rc-lowpass.png", 900, 700, 1);
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(p);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/rc-lowpass.png");

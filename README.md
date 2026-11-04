@@ -85,7 +85,7 @@ The first run downloads the current Linux x86-64 or arm64 lmdraw release binary 
 
 ## Write your own
 
-An lmdraw program is an lmscript file. Plain lmscript computes; the `_dsl_` block is compiled against lmdraw's typed schema and runs inside the native host.
+An lmdraw program is an lmscript file. Plain lmscript computes; the `_lmcode_` block is compiled against lmdraw's typed schema and runs inside the native host.
 
 ```lmscript
 mkdir("images");
@@ -99,9 +99,8 @@ scene.arrow(170.0, 100.0, 300.0, 100.0, "#f5c16c", 3.0);
 scene.text(320.0, 106.0, 22.0, ${label}, "#e6edf3");
 scene.render_png("images/leo.png", 640, 200, 2);
 end _lmcode_
-savedsl(p, "private implementation detail");
-r = system ${dsl_cli(p)} --lmcode private implementation detail;
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 ```
 
 The scene API: `canvas`, `rect`, `circle`, `ellipse`, `line`, `arrow`, `polyline`, `path` (SVG path data), `text` (with optional wrap width), `axes`, `log_axes` (semi-log and log–log decade ticks), `legend` (auto-measured multi-series legend box), `group`, `image` (PNG data URI), `linear_gradient`, `load_svg`, `load_font`, `measure_text` and `render_png`; every node keeps SVG-style attributes (`set_attr`) and can be changed between frames. Run `lmdraw --lmcode-schema` for the exact signatures and read [docs/LLM_GUIDE.md](docs/LLM_GUIDE.md) for attributes, limits and recipes.
@@ -123,7 +122,7 @@ lmdraw is a single self-contained executable (LunaSVG/PlutoVG rasterizer, Noto S
 - **Glyph coverage.** The embedded Noto Sans Regular/Bold and Noto Sans Math fallback cover Latin, Greek, Cyrillic, sub/superscripts, arrows (→ ← ↑ ↓ ↔ ⇒ ⇔), and common mathematical operators (∝, ∞, ≤, ≥, ≈, ≠, √, ∂, ∆, ∇, ∫, ∑, ∏, ✓). No complex-script OpenType shaping or right-to-left layout.
 - **Lightweight plot helpers, not a statistical charting suite.** `axes`, `log_axes`, and `legend` draw linear/logarithmic axes and multi-series legends; curve sampling and fitting are done in lmscript (see `kleiber-allometry.lms` and `rc-lowpass.lms`). For data-heavy statistical charts use [lmplot](https://github.com/lmctl-ai/lmplot).
 - **No filters.** No blur, drop shadow or radial-gradient constructor; imported SVG must stay within a static subset (no CSS, scripts or external references).
-- **lmscript has no trig or log built-ins** outside the `_dsl_` block (the block itself has `sin`, `cos`, `sqrt`, `pow`); the examples carry short series implementations. Integral numbers cross into a `_dsl_` block as `int`, so pass coordinates as strings or compute them inside the block.
+- **lmscript has no trig or log built-ins** outside the `_lmcode_` block (the block itself has `sin`, `cos`, `sqrt`, `pow`); the examples carry short series implementations. Integral numbers cross into a `_lmcode_` block as `int`, so pass coordinates as strings or compute them inside the block.
 - Byte-identical output is promised for the same binary; different platforms may differ in the last bits of anti-aliasing.
 
 ## Build and test

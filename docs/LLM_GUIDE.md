@@ -1,6 +1,6 @@
 # lmdraw script guide
 
-lmdraw runs lmscript bytecode. Compile each script against private implementation detail (or the identical bytes printed by lmdraw --schema --json), then run the bytecode with lmdraw --lmcode. The executable embeds that schema and the Noto Sans Regular and Bold fonts.
+lmdraw runs lmscript `_lmcode_` programs. A block is compiled against the schema lmdraw reports (`lmdraw --schema --json`) and `run_lmcode` runs it on lmdraw (`lmdraw --lmcode` on a private program file lmscript writes), returning the result as data. The executable embeds that schema and the Noto Sans Regular and Bold fonts.
 
 ## Coordinate system
 
@@ -9,22 +9,22 @@ Coordinates and sizes are floating-point CSS pixels. The canvas origin is at the
 ## One minute script
 
 ```lmscript
-p = _lmcode_ schema="private implementation detail";
+p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(640, 360, "#152438");
 let card = scene.rect(36.0, 36.0, 568.0, 288.0, "#1f344b");
 card.set_attr("stroke", "#6fbdb4");
 card.set_attr("stroke-width", "2");
 scene.text(72.0, 148.0, 38.0, "A retained scene", "#f5f8fb");
-scene.render_png("private implementation detail", 640, 360, 2);
+scene.render_png("card.png", 640, 360, 2);
 end _lmcode_
-savedsl(p, "private implementation detail");
+r = run_lmcode(p);
+require(r.ok, json_stringify(r));
 ```
 
-Compile and run from the repository root:
+Run it with lmscript; the block installs lmdraw on first use:
 
 ```sh
-lmscript examples/title-card.lms private implementation detail
-private implementation detail --lmcode private implementation detail
+lmscript examples/title-card.lms
 ```
 
 ## Schema reference
@@ -298,9 +298,8 @@ p = _lmcode_ cli="lmdraw" install="github:lmctl-ai/lmdraw@latest";
 scene.canvas(640, 360, "#152438");
 scene.render_png("private implementation detail", 640, 360, 1);
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-assert(r.code == 0);
+r = run_lmcode(p);
+assert(r.ok);
 copy_file("private implementation detail", "images/card.png");
 ```
 
@@ -316,8 +315,8 @@ Practical notes:
   functions, and `sprintf` has no `%e` or `%x`; the examples carry short series
   helpers (`examples/rc-lowpass.lms`, `examples/kepler-second-law.lms`).
 - A block may define typed functions (`fn box(x: float, y: float) -> void { ... }`)
-  and may be created inside an lmscript function; several saved blocks passed to
-  one `lmdraw --lmcode a.dslb b.dslb` share one scene (`examples/truss-bridge.lms`).
+  and may be created inside an lmscript function; several blocks added to one
+  `lmcode_build(["lmdraw", "--lmcode"])` builder run in one lmdraw process and share one scene (`examples/truss-bridge.lms`).
 - The embedded Noto Sans + Noto Sans Math fonts cover Latin, Greek, Cyrillic, sub/superscripts, arrows (→ ← ↑ ↓ ↔ ⇒ ⇔), and common math symbols (∝, ∞, ≤, ≥, ≈, ≠, √, ∂, ∆, ∇, ∫, ∑, ∏, ✓).
 - Optional tools: test with `which("ffmpeg") != null` before calling them, since
   `system` throws when the program is missing.

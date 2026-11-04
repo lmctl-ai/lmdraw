@@ -8,7 +8,6 @@
 # Known answers: reactions 45 kN each; end diagonals -63.6 kN; mid top chord -60 kN (Pratt), -45 kN (Howe);
 # Pratt interior diagonals +21.2 kN (tension), Howe interior diagonals -21.2 kN.
 # Writes images/truss-bridge.png (900x700).
-out = ARGV.len() > 0 ? ARGV[0] : "build/truss-bridge.dslb";
 mkdir("images");
 mkdir("build");
 
@@ -162,11 +161,13 @@ scene.text(690.0, 472.0, 12.0, "Long members buckle when pushed. Pratt puts its 
 scene.render_png("images/truss-bridge.png", 900, 700, 1);
 end _lmcode_
 
-savedsl(p, out);
-savedsl(qa, "build/truss-bridge-pratt.dslb");
-savedsl(qb, "build/truss-bridge-howe.dslb");
-savedsl(z, "build/truss-bridge-panel.dslb");
-r = system ${dsl_cli(p)} --lmcode ${out} build/truss-bridge-pratt.dslb build/truss-bridge-howe.dslb build/truss-bridge-panel.dslb;
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+# One lmdraw process runs the four programs in this order (one result part each).
+b = lmcode_build(["lmdraw", "--lmcode"]);
+b.add(p, ["$DSLFILE"]);
+b.add(qa, ["$DSLFILE"]);
+b.add(qb, ["$DSLFILE"]);
+b.add(z, ["$DSLFILE"]);
+r = run_lmcode(b);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 println("wrote images/truss-bridge.png");

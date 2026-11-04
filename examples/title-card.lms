@@ -1,6 +1,5 @@
 # Title card: styled text, shapes and an accent rule on one canvas.
 # Writes images/title-card.png (960x540).
-out = ARGV.len() > 0 ? ARGV[0] : "build/title-card.dslb";
 mkdir("images");
 mkdir("build");
 mkdir("build/rendered");
@@ -19,9 +18,8 @@ scene.line(104.0, 388.0, 772.0, 388.0, "#6fbdb4", 3.0);
 scene.text(104.0, 436.0, 17.0, "lmdraw / retained vector scene / 2026", "#b8c8d6");
 scene.render_png("build/rendered/title-card.png", 960, 540, 1);
 end _lmcode_
-savedsl(p, out);
-r = system ${dsl_cli(p)} --lmcode ${out};
-if (r.code != 0) { println(r.stderr); }
-assert(r.code == 0);
+r = run_lmcode(p);
+if (!r.ok) { println(json_stringify(r)); }
+assert(r.ok);
 copy_file("build/rendered/title-card.png", "images/title-card.png");
 println("wrote images/title-card.png");
