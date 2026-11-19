@@ -4,6 +4,8 @@
 
 **Scripted 2D diagrams that compute their own content: write a small lmscript program, get a crisp, repeatable PNG (or a GIF of numbered frames).**
 
+**Documentation:** [lmctl.com/tools/lmdraw](https://www.lmctl.com/tools/lmdraw/) · [skill](https://www.lmctl.com/tools/lmdraw/skill.html) · [guide](https://www.lmctl.com/tools/lmdraw/guide.html) · [reference](https://www.lmctl.com/tools/lmdraw/reference.html) · [tutorial](https://www.lmctl.com/tools/lmdraw/tutorial.html) · [get started](https://www.lmctl.com/tools/lmdraw/get_started.html) · [examples](https://www.lmctl.com/tools/lmdraw/examples/)
+
 [![CI](https://github.com/lmctl-ai/lmdraw/actions/workflows/public-ci.yml/badge.svg)](https://github.com/lmctl-ai/lmdraw/actions/workflows/public-ci.yml)
 [![Latest release](https://img.shields.io/github/v/release/lmctl-ai/lmdraw?label=release)](https://github.com/lmctl-ai/lmdraw/releases)
 [![Examples: MIT](https://img.shields.io/badge/examples-MIT-blue.svg)](LICENSE-examples)
